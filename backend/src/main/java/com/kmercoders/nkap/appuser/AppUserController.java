@@ -13,46 +13,59 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class AppUserController {
-	private final JwtService jwtService;
-	private final AuthenticationManager authenticationManager;
-	private final AppUserRepository appUserRepository;
-	private final PasswordEncoder passwordEncoder;
 
-	public AppUserController(JwtService jwtService, AuthenticationManager authenticationManager,
-			AppUserRepository appUserRepository, PasswordEncoder passwordEncoder) {
-		this.jwtService = jwtService;
-		this.authenticationManager = authenticationManager;
-		this.appUserRepository = appUserRepository;
-		this.passwordEncoder = passwordEncoder;
-	}
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final AppUserRepository appUserRepository;
+    private final PasswordEncoder passwordEncoder;
 
-	@PostMapping("/login")
-	public ResponseEntity<?> getToken(@RequestBody AccountCredentials credentials) {
-		UsernamePasswordAuthenticationToken creds = new UsernamePasswordAuthenticationToken(credentials.username(),
-				credentials.password());
-		Authentication auth = authenticationManager.authenticate(creds);
-		// Generate token
-		String jwts = jwtService.getToken(auth.getName());
-		// Build response with the generated token
-		return ResponseEntity.ok().header(HttpHeaders.AUTHORIZATION, "Bearer " + jwts)
-				.header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "Authorization").build();
-	}
+    public AppUserController(JwtService jwtService,
+                             AuthenticationManager authenticationManager,
+                             AppUserRepository appUserRepository,
+                             PasswordEncoder passwordEncoder) {
+        this.jwtService = jwtService;
+        this.authenticationManager = authenticationManager;
+        this.appUserRepository = appUserRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
-	@PostMapping("/register")
-	public ResponseEntity<?> register(@RequestBody AccountCredentials credentials) {
-		if (credentials == null || credentials.username() == null || credentials.password() == null || credentials.email() == null) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("username, password and email required");
-		}
+    @PostMapping("/login")
+    public ResponseEntity<?> getToken(@RequestBody AccountCredentials credentials) {
+        UsernamePasswordAuthenticationToken creds =
+                new UsernamePasswordAuthenticationToken(
+                        credentials.email(),
+                        credentials.password()
+                );
+        Authentication auth = authenticationManager.authenticate(creds);
+        String jwts = jwtService.getToken(auth.getName());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwts)
+                .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "Authorization")
+                .build();
+    }
 
-		if (appUserRepository.findByUsername(credentials.username()).isPresent()) {
-			return ResponseEntity.status(HttpStatus.CONFLICT).body("username already exists");
-		}
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody AccountCredentials credentials) {
+        if (credentials == null ||
+            credentials.email() == null ||
+            credentials.password() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("email and password required");
+        }
 
-		AppUser user = new AppUser();
-		user.setUsername(credentials.username());
-		user.setPassword(passwordEncoder.encode(credentials.password()));
-		user.setEmail(credentials.email());
-		appUserRepository.save(user);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
-	}
+        if (appUserRepository.findByEmail(credentials.email()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("email already exists");
+        }
+
+        AppUser user = new AppUser();
+
+        user.setFullName(credentials.fullname());
+        user.setEmail(credentials.email());
+        user.setPassword(passwordEncoder.encode(credentials.password()));
+
+        appUserRepository.save(user);
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 }
