@@ -1,9 +1,18 @@
 import { useState } from 'react'
-import SignIn from './layouts/sign-in/SignIn';
+import SignIn from './layouts/SignIn';
+import SignUp from './layouts/SignUp';
+import Home from './layouts/Home';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 function App() {
   return (
-    <SignIn disableCustomTheme />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignIn disableCustomTheme = {false} />} />
+        <Route path="/signup" element={<SignUp disableCustomTheme = {false} />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
