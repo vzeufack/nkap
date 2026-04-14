@@ -1,0 +1,36 @@
+.card{
+	margin-top: 100px;
+	width:400px;
+}
+
+.bree-serif{
+	font-weight: bold;
+	font-family: Bree Serif, cursive;
+}
+
+.card-header{
+	text-align: center;
+}
+
+.card-header h2{
+	color: #24a0ed
+}
+
+.form-bottom{
+	text-align: center;
+	margin-top:25px;
+}
+
+.btn{
+	width:170px;
+	border-radius:20px
+}
+
+label{
+	margin-bottom: 0px;
+	font-weight: bold;
+}
+
+#register-link{
+	margin-top:10px;
+}

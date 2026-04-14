@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th = "http://thymeleaf.org">
+<head>
+	<title>Registration</title>
+	<th:block th:replace="fragments/header :: css"></th:block>
+	<link rel="stylesheet" href="/css/authentication.css"/>
+</head>
+<body>
+	<div class = "container">
+		<div class="card mx-auto">
+		  <div class="card-header bree-serif">
+		  	<h2>Create an account</h2>
+		  </div>
+		  <div class="card-body">
+		    <div id="errorMsg" class="alert alert-danger d-none" role="alert" th:text = "${error}"></div>
+		    <form action = "/register" th:object="${user}" method = "post">
+			  <div class="mb-3">
+			    <label for="email" class="form-label">Email</label>
+			    <input type="text" class="form-control" th:field = "${user.email}"/>
+			  </div>
+			  <div class="mb-3">
+			    <label for="password" class="form-label">Password</label>
+			    <input type="password" class="form-control" th:field = "${user.password}"/>
+			  </div>
+			  
+			  <!--<div class="mb-3">
+			    <label for="confirmPassword" class="form-label">Confirm Password</label>
+			    <input type="password" class="form-control" th:field = "${user.confirmPassword}"/>
+			  </div>-->
+			  <div class = "form-bottom">
+				  <button type="submit" class="btn btn-primary">Register</button>
+				  <p id="register-link">Already have an account? <a href="/login">Login</a></p>
+			  </div>
+			</form>
+		  </div>
+		</div>
+	</div>
+	<th:block th:replace="fragments/header :: scripts"></th:block>
+	<script src="/js/authentication.js"></script>
+</body>
+</html>

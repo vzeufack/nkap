@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Login</title>
+		<div th:replace="fragments/header :: css"></div>
+		<link rel="stylesheet" href="/css/authentication.css"/>
+	</head>
+	<body>
+		<div class="container">
+		 	<div class="card mx-auto">
+			  <div class="card-header bree-serif">
+			  	<h2>Welcome to Nkap <i class='fas fa-coins'></i></h2>
+			  	<h5>Your personal budgeting assitant</h5>
+			  </div>
+			  <div class="card-body">
+				 <form th:action="@{/login}" th:object="${user}" method="POST">
+			        <div th:if = "${param.error != null}" class="alert alert-danger">
+			            <div>
+			                Invalid email or password! <span th:text = "${param.error}"></span>
+			                <div th:if = "${SPRING_SECURITY_LAST_EXCEPTION != null}">
+			                  Reason: <span th:text="${SPRING_SECURITY_LAST_EXCEPTION.message}"></span>
+			                </div>
+			            </div>
+			        </div>
+			        <div th:if="${param.logout != null}">
+			           You have been logged out.
+			        </div>
+			        <div class = "form-group">
+				        <label for="email">Email</label>
+				        <input type="text" class="form-control" th:field="${user.email}"/>
+						<p th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Error message</p>
+					</div>
+			        <div class = "form-group">
+				        <label for="password">Password</label>
+				        <input type="password" class="form-control" th:field="${user.password}"/>
+			        </div>
+			        <div class = "form-bottom">
+			            <button type="submit" class="btn btn-primary">Login</button>
+			            <p id="register-link">Don't have an account? <a href="/register">Register</a></p>
+			        </div>
+				 </form>
+			  </div>	  
+		 	</div>
+		</div>
+		<div th:replace="fragments/header.html :: scripts"></div>
+	</body>
+</html>

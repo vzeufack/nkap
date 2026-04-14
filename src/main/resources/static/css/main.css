@@ -1,0 +1,105 @@
+.shadowed{
+	box-shadow: rgb(128, 128, 128) 0px 2px 5px;
+}
+
+.my-anchor{
+	color:black
+}
+
+#logo{
+	font-size:25px;
+	color: #24a0ed
+}
+
+.fa-sign-out-alt{
+	font-size:20px;
+	margin-right:10px;
+}
+
+.group-name{
+	font-weight:bold;
+	font-size:20px;
+}
+
+a .group-name:hover, a .category-name:hover, .text-danger, .text-primary{
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+#toggle-bars{
+	text-decoration: none;
+}
+
+.progress{
+	height: 5px;
+}
+
+.navbar{
+	font-family: Bree Serif, cursive;
+}
+
+.clickable-row{
+	cursor: pointer;
+}
+
+.note {
+  display: block;
+  width: 600px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stat{
+	background-color:white;
+	border-style:solid;
+	border-radius: 5px;
+	border-color:white;
+	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 10px;
+	height: 100px;
+	padding-top: 5%
+}
+
+.nav-item.active{
+	background-color:rgb(230, 230, 230);
+	border-radius: 5px;
+}
+
+#menu a:hover{
+	text-decoration: underline;
+	color:#24a0ed;
+}
+
+btn-outline-primary{
+	font-weight:600;
+	border-style:solid;
+	border-width:2px;
+}
+
+.fa-github{
+	font-size:16px
+}
+
+.nav-link.btn.btn-primary{
+	border-radius: 20px;
+	width: 170px;
+	color: white !important
+}
+
+.bree-serif{
+	font-weight: bold;
+	font-family: Bree Serif, cursive;
+}
+
+.bree-serif-normal{
+	font-family: Bree Serif, cursive;
+}
+
+label{
+	margin-bottom: 0px;
+	font-weight: bold;
+}
+
+#add-budget-error{
+	display:none
+}
