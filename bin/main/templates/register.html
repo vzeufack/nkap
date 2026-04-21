@@ -12,21 +12,22 @@
 		  	<h2>Create an account</h2>
 		  </div>
 		  <div class="card-body">
-		    <div id="errorMsg" class="alert alert-danger d-none" role="alert" th:text = "${error}"></div>
-		    <form action = "/register" th:object="${user}" method = "post">
+		    <form action = "/register" th:object="${appUserDTO}" method = "post">
 			  <div class="mb-3">
 			    <label for="email" class="form-label">Email</label>
-			    <input type="text" class="form-control" th:field = "${user.email}"/>
+			    <input type="text" class="form-control" th:field="*{email}"
+               			th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
+        		<div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" 
+         				th:text="${#fields.errors('email')[0]}"></div>
 			  </div>
 			  <div class="mb-3">
 			    <label for="password" class="form-label">Password</label>
-			    <input type="password" class="form-control" th:field = "${user.password}"/>
+			    <input type="password" class="form-control" th:field="*{password}"
+               			th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"/>
+				<div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" 
+         				th:text="${#fields.errors('password')[0]}"></div>
 			  </div>
-			  
-			  <!--<div class="mb-3">
-			    <label for="confirmPassword" class="form-label">Confirm Password</label>
-			    <input type="password" class="form-control" th:field = "${user.confirmPassword}"/>
-			  </div>-->
+			  <div id="errorMsg" class="alert alert-danger" role="alert" th:if="${error}" th:text = "${error}"></div>
 			  <div class = "form-bottom">
 				  <button type="submit" class="btn btn-primary">Register</button>
 				  <p id="register-link">Already have an account? <a href="/login">Login</a></p>

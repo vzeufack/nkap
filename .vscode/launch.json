@@ -2,11 +2,11 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Spring Boot-NkapApplication<nkap-backend>",
+            "name": "Spring Boot-NkapApplication<nkap>",
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "mainClass": "com.kmercoders.nkap.NkapApplication",
-            "projectName": "nkap-backend",
+            "projectName": "nkap",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

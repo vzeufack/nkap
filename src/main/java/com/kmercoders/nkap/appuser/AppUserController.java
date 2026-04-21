@@ -1,16 +1,19 @@
 package com.kmercoders.nkap.appuser;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 @Controller
 public class AppUserController {
@@ -24,38 +27,41 @@ public class AppUserController {
     
     @GetMapping(value = "/login")
     public String getLogin(ModelMap model) {
-        AppUser user = new AppUser();
-        model.put("user", user);
+        AppUserDTO appUserDTO = new AppUserDTO();
+        model.put("appUserDTO", appUserDTO);
         
         return "login";
     }
    
     @GetMapping(value = "/register")
-    public String getRegister (ModelMap model) {
-        AppUser user = new AppUser();
-        model.put("user", user);
+    public String getRegister (ModelMap model, Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated()) {
+            return "redirect:/";
+        }
+
+        AppUserDTO appUserDTO = new AppUserDTO();
+        model.put("appUserDTO", appUserDTO);
         
         return REGISTER;
     }
    
     @PostMapping(value = "/register")
-    public String postRegister (@ModelAttribute AppUser appUser, ModelMap model,
+    public String postRegister (@Valid @ModelAttribute AppUserDTO appUserDTO, BindingResult bindingResult, ModelMap model,
                                 HttpServletRequest request, HttpServletResponse response) {
-        if(appUser.getEmail().isEmpty() || appUser.getEmail() == null) {
-            model.put(ERROR, "Please provide an email");    
-                return REGISTER;
+
+        if (bindingResult.hasErrors()) {
+            model.put("appUser", appUserDTO);
+            return REGISTER;
         }
-            
-        if(appUser.getPassword().isEmpty()) {
-            model.put(ERROR, "Please provide a password");
-                return REGISTER;
-        }
+        
+        AppUser appUser = new AppUser(appUserDTO.getEmail(), appUserDTO.getPassword());
         
         try {
             appUser = userService.saveUser(appUser);
         }
         catch (Exception e) {
             model.put(ERROR, "Username already exists");
+            model.put("appUser", appUserDTO);
             return REGISTER;
         }
         

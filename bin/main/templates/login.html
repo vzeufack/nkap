@@ -13,7 +13,7 @@
 			  	<h5>Your personal budgeting assitant</h5>
 			  </div>
 			  <div class="card-body">
-				 <form th:action="@{/login}" th:object="${user}" method="POST">
+				 <form th:action="@{/login}" th:object="${appUserDTO}" method="POST">
 			        <div th:if = "${param.error != null}" class="alert alert-danger">
 			            <div>
 			                Invalid email or password! <span th:text = "${param.error}"></span>
@@ -27,12 +27,12 @@
 			        </div>
 			        <div class = "form-group">
 				        <label for="email">Email</label>
-				        <input type="text" class="form-control" th:field="${user.email}"/>
+				        <input type="text" class="form-control" th:field="${appUserDTO.email}"/>
 						<p th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Error message</p>
 					</div>
 			        <div class = "form-group">
 				        <label for="password">Password</label>
-				        <input type="password" class="form-control" th:field="${user.password}"/>
+				        <input type="password" class="form-control" th:field="${appUserDTO.password}"/>
 			        </div>
 			        <div class = "form-bottom">
 			            <button type="submit" class="btn btn-primary">Login</button>
