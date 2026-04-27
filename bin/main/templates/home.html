@@ -1,12 +1,264 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>Home</title>
-        <div th:replace="fragments/header :: css"></div>
-    </head>
-    <body>
-        <h1>Welcome to Nkap!</h1>
-        <p>Your personal budgeting assistant.</p>
-        <div th:replace="fragments/header :: scripts"></div>
-    </body>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <title>nkap – Budget</title>
+    <th:block th:replace="~{fragments/header :: css}"></th:block>
+    <link rel="stylesheet" href="/css/budget.css"/>
+</head>
+<body>
+
+<div class="container-fluid p-0 page-wrapper">
+
+    <!-- ═══════════════════════════════════════════
+         ROW 1 — HEADER BAR  (col-2 | col-7 | col-3)
+         mirrors exactly the content row below
+    ═══════════════════════════════════════════ -->
+    <div class="row no-gutters header-bar align-items-center">
+
+        <!-- H-Col 1: Logo — aligns over sidebar (col-2) -->
+        <div class="col-2 logo-col d-flex align-items-center justify-content-center">
+            <span class="bree-serif nkap-logo">
+                <i class="fas fa-wallet"></i> nkap
+            </span>
+        </div>
+
+        <!-- H-Col 2: Month navigator — aligns over budget plan (col-7) -->
+        <div class="col-7 month-col d-flex align-items-center justify-content-center">
+            <div class="month-nav-wrap d-flex align-items-center">
+                <button class="btn btn-month-nav" id="btnPrevMonth" title="Previous month">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="input-group month-picker-group mx-2">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                    </div>
+                    <input type="text"
+                           id="monthPicker"
+                           class="form-control month-input"
+                           placeholder="April 2025"
+                           th:value="${currentMonth ?: ''}"
+                           readonly/>
+                </div>
+                <button class="btn btn-month-nav" id="btnNextMonth" title="Next month">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button class="btn btn-month-today ml-2" id="btnToday" title="Go to current month">
+                    Today
+                </button>
+            </div>
+        </div>
+
+        <!-- H-Col 3: Action buttons — aligns over groups panel (col-3) -->
+        <div class="col-3 actions-col d-flex align-items-center justify-content-center">
+            <button class="btn btn-header btn-primary-nkap mr-2" title="Add Transaction">
+                <i class="fas fa-plus mr-1"></i> Add Transaction
+            </button>
+            <button class="btn btn-header btn-outline-nkap mr-2" title="Bulk Upload">
+                <i class="fas fa-upload mr-1"></i> Bulk Upload
+            </button>
+            <button class="btn btn-header btn-outline-nkap" title="Download Template">
+                <i class="fas fa-file-download mr-1"></i> Template
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ROW 2 — MAIN CONTENT
+    ═══════════════════════════════════════════ -->
+    <div class="row no-gutters content-row">
+
+        <!-- C-Col 1: Sidebar (col-2) -->
+        <div class="col-2 sidebar d-flex flex-column">
+
+            <!-- Sidebar Row 1: Vertical nav -->
+            <div class="sidebar-section sidebar-nav-section">
+                <ul class="nav flex-column sidebar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link sidebar-link active" href="/budget">
+                            <i class="fas fa-th-large nav-icon"></i>
+                            <span>Budget</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link sidebar-link" href="/reports">
+                            <i class="fas fa-chart-bar nav-icon"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link sidebar-link" href="/transactions">
+                            <i class="fas fa-exchange-alt nav-icon"></i>
+                            <span>Transactions</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Sidebar Row 2: Accounts (fills remaining height) -->
+            <div class="sidebar-section sidebar-accounts-section flex-grow-1">
+                <div class="sidebar-section-header">
+                    <span>Accounts</span>
+                    <button class="btn-icon" title="Add account"><i class="fas fa-plus-circle"></i></button>
+                </div>
+
+                <div class="account-list">
+                    <!-- Live data -->
+                    <div class="account-item" th:each="account : ${accounts}">
+                        <div class="account-icon"><i class="fas fa-university"></i></div>
+                        <div class="account-info">
+                            <span class="account-name" th:text="${account.name}">Checking</span>
+                            <span class="account-balance"
+                                  th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 2)}">$0.00</span>
+                        </div>
+                    </div>
+                    <!-- Placeholders -->
+                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
+                        <div class="account-icon"><i class="fas fa-university"></i></div>
+                        <div class="account-info">
+                            <span class="account-name">Checking</span>
+                            <span class="account-balance">$2,400.00</span>
+                        </div>
+                    </div>
+                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
+                        <div class="account-icon savings-icon"><i class="fas fa-piggy-bank"></i></div>
+                        <div class="account-info">
+                            <span class="account-name">Savings</span>
+                            <span class="account-balance">$8,150.00</span>
+                        </div>
+                    </div>
+                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
+                        <div class="account-icon credit-icon"><i class="fas fa-credit-card"></i></div>
+                        <div class="account-info">
+                            <span class="account-name">Credit Card</span>
+                            <span class="account-balance negative">-$320.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accounts-total">
+                    <span class="total-label">Net Worth</span>
+                    <span class="total-amount bree-serif"
+                          th:text="${'$' + #numbers.formatDecimal(netWorth ?: 10230, 1, 2)}">$10,230.00</span>
+                </div>
+            </div>
+
+            <!-- Sidebar Row 3: User / Logout -->
+            <div class="sidebar-section sidebar-user-section">
+                <div class="user-info">
+                    <i class="fas fa-user-circle user-avatar-icon"></i>
+                    <span class="user-email" th:text="${appUser?.email ?: 'user@email.com'}">user@email.com</span>
+                </div>
+                <a href="/logout" class="btn btn-logout" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+
+        </div>
+
+        <!-- C-Col 2: Budget Plan (col-7) -->
+        <div class="col-7 budget-main d-flex flex-column">
+
+            <div class="budget-main-header">
+                <h5 class="bree-serif mb-0">Budget Plan</h5>
+                <span class="budget-period text-muted"
+                      th:text="${currentMonth ?: 'April 2025'}">April 2025</span>
+            </div>
+
+            <!-- Empty state -->
+            <div class="budget-empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center"
+                 th:if="${budget == null}">
+                <div class="empty-icon-wrap mb-4">
+                    <i class="fas fa-clipboard-list empty-icon"></i>
+                </div>
+                <p class="empty-title bree-serif">No budget yet for this period</p>
+                <p class="empty-subtitle text-muted">Set up your monthly plan to start tracking income and expenses.</p>
+                <button class="btn btn-create-budget">
+                    <i class="fas fa-plus mr-2"></i>Create Budget
+                </button>
+            </div>
+
+            <!-- Budget content (when budget exists) -->
+            <div class="budget-content flex-grow-1" th:if="${budget != null}">
+                <!-- Budget groups/categories rendered here -->
+            </div>
+
+        </div>
+
+        <!-- C-Col 3: Groups & Transactions (col-3) -->
+        <div class="col-3 groups-panel d-flex flex-column">
+
+            <div class="groups-panel-header">
+                <h6 class="bree-serif mb-0">Groups</h6>
+                <button class="btn-icon" title="Add group"><i class="fas fa-plus-circle"></i></button>
+            </div>
+
+            <div class="groups-list flex-grow-1">
+
+                <div class="group-block">
+                    <div class="group-title">
+                        <i class="fas fa-home group-icon"></i>
+                        <span>Housing</span>
+                        <span class="group-total ml-auto">$1,200.00</span>
+                    </div>
+                    <ul class="group-transactions">
+                        <li class="group-tx">
+                            <span class="tx-name">Rent</span>
+                            <span class="tx-amount">$1,200.00</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="group-block">
+                    <div class="group-title">
+                        <i class="fas fa-utensils group-icon"></i>
+                        <span>Food</span>
+                        <span class="group-total ml-auto">$430.00</span>
+                    </div>
+                    <ul class="group-transactions">
+                        <li class="group-tx">
+                            <span class="tx-name">Groceries</span>
+                            <span class="tx-amount">$280.00</span>
+                        </li>
+                        <li class="group-tx">
+                            <span class="tx-name">Restaurants</span>
+                            <span class="tx-amount">$150.00</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="group-block">
+                    <div class="group-title">
+                        <i class="fas fa-car group-icon"></i>
+                        <span>Transport</span>
+                        <span class="group-total ml-auto">$210.00</span>
+                    </div>
+                    <ul class="group-transactions">
+                        <li class="group-tx">
+                            <span class="tx-name">Gas</span>
+                            <span class="tx-amount">$90.00</span>
+                        </li>
+                        <li class="group-tx">
+                            <span class="tx-name">Uber</span>
+                            <span class="tx-amount">$120.00</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="groups-placeholder-note">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Groups and linked transactions will appear here based on your budget plan.</span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div><!-- end content row -->
+
+</div><!-- end page-wrapper -->
+
+<th:block th:replace="~{fragments/header :: scripts}"></th:block>
+<script src="/js/budget.js"></script>
+</body>
 </html>

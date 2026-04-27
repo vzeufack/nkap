@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<title>Login</title>
-		<div th:replace="fragments/header :: css"></div>
+		<div th:replace="~{fragments/header :: css}"></div>
 		<link rel="stylesheet" href="/css/authentication.css"/>
 	</head>
 	<body>
@@ -36,6 +36,6 @@
 			  </div>	  
 		 	</div>
 		</div>
-		<div th:replace="fragments/header.html :: scripts"></div>
+		<div th:replace="~{fragments/header :: scripts}"></div>
 	</body>
 </html>

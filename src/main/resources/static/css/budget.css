@@ -1,0 +1,642 @@
+/* ═══════════════════════════════════════════
+   budget.css — nkap budgeting main page
+═══════════════════════════════════════════ */
+
+/* ── Shared tokens ── */
+:root {
+    --nkap-blue:        #24a0ed;
+    --nkap-blue-dark:   #1a7fc0;
+    --nkap-blue-light:  #e8f4fd;
+    --nkap-green:       #27ae60;
+    --nkap-red:         #e74c3c;
+    --sidebar-bg:       #f8f9fa;
+    --sidebar-border:   #e3e8ef;
+    --header-height:    64px;
+    --text-muted:       #8a9bb0;
+    --text-dark:        #2c3e50;
+    --panel-bg:         #ffffff;
+    --panel-border:     #e3e8ef;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Bree Serif', serif;
+    background-color: #f0f4f8;
+    color: var(--text-dark);
+}
+
+/* ── Utility ── */
+.bree-serif {
+    font-family: 'Bree Serif', serif;
+    font-weight: bold;
+}
+
+/* ══════════════════════════════════════════
+   ROW 1 — HEADER BAR
+══════════════════════════════════════════ */
+.header-bar {
+    height: var(--header-height);
+    background: var(--panel-bg);
+    box-shadow: 0 2px 8px rgba(36, 160, 237, 0.07);
+}
+
+/* Logo column (col-2) */
+.logo-col {
+    height: var(--header-height);
+    border-right: 2px solid var(--panel-border);
+    border-bottom: 2px solid var(--panel-border);
+    background: var(--panel-bg);
+}
+
+.nkap-logo {
+    font-size: 1.5rem;
+    color: var(--nkap-blue);
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.nkap-logo i {
+    font-size: 1.2rem;
+    margin-right: 5px;
+}
+
+/* Month column (col-8) */
+.month-col {
+    height: var(--header-height);
+    border-bottom: 2px solid var(--panel-border);
+}
+
+/* Actions column (col-3) — aligns directly over groups panel */
+.actions-col {
+    height: var(--header-height);
+    border-bottom: 2px solid var(--panel-border);
+    background: var(--panel-bg);
+    gap: 6px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 12px;
+}
+
+/* Month navigator */
+.month-nav-wrap {
+    flex-shrink: 0;
+}
+
+.btn-month-nav {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--nkap-blue-light);
+    border: 1.5px solid var(--panel-border);
+    color: var(--nkap-blue);
+    font-size: 0.8rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.btn-month-nav:hover {
+    background: var(--nkap-blue);
+    border-color: var(--nkap-blue);
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.btn-month-today {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1.5px solid var(--panel-border);
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-month-today:hover {
+    background: var(--nkap-blue-light);
+    border-color: var(--nkap-blue);
+    color: var(--nkap-blue);
+}
+
+.month-picker-group {
+    width: 160px;
+}
+
+.month-input {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.93rem;
+    border-radius: 0 8px 8px 0 !important;
+    border-color: var(--panel-border);
+    cursor: pointer;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue-dark);
+    font-weight: bold;
+    text-align: center;
+}
+
+.month-input:focus {
+    box-shadow: 0 0 0 3px rgba(36, 160, 237, 0.15);
+    border-color: var(--nkap-blue);
+}
+
+.input-group-text {
+    background: var(--nkap-blue-light);
+    border-color: var(--panel-border);
+    color: var(--nkap-blue);
+    border-radius: 8px 0 0 8px !important;
+}
+
+/* Header action buttons */
+.btn-header {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.78rem;
+    padding: 6px 11px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-label {
+    display: inline;
+}
+
+.btn-primary-nkap {
+    background: var(--nkap-blue);
+    border: 2px solid var(--nkap-blue);
+    color: #fff;
+}
+
+.btn-primary-nkap:hover {
+    background: var(--nkap-blue-dark);
+    border-color: var(--nkap-blue-dark);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(36, 160, 237, 0.3);
+}
+
+.btn-outline-nkap {
+    background: transparent;
+    border: 2px solid var(--nkap-blue);
+    color: var(--nkap-blue);
+}
+
+.btn-outline-nkap:hover {
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue-dark);
+    transform: translateY(-1px);
+}
+
+/* ══════════════════════════════════════════
+   ROW 2 — MAIN CONTENT
+══════════════════════════════════════════ */
+.content-row {
+    height: calc(100vh - var(--header-height));
+    overflow: hidden;
+}
+
+/* ══════════════════════════════════════════
+   COLUMN 1 — SIDEBAR (col-2)
+══════════════════════════════════════════ */
+.sidebar {
+    background: var(--sidebar-bg);
+    border-right: 2px solid var(--sidebar-border);
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Sidebar sections share the column height in 25 / 70 / 5 ratio */
+.sidebar-section {
+    border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-nav-section {
+    flex: 0 0 auto;
+    padding: 12px 0;
+}
+
+.sidebar-accounts-section {
+    flex: 1 1 0;
+    overflow-y: auto;
+    padding-bottom: 8px;
+}
+
+.sidebar-user-section {
+    flex: 0 0 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--panel-bg);
+    border-top: 2px solid var(--sidebar-border);
+    border-bottom: none;
+}
+
+/* Vertical nav links */
+.sidebar-nav {
+    padding: 0;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    border-radius: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-link:hover {
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    text-decoration: none;
+}
+
+.sidebar-link.active {
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    border-left: 3px solid var(--nkap-blue);
+    font-weight: bold;
+}
+
+.nav-icon {
+    width: 18px;
+    text-align: center;
+    color: var(--nkap-blue);
+    font-size: 0.9rem;
+}
+
+/* Accounts section */
+.sidebar-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 6px;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--nkap-blue);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s, transform 0.15s;
+}
+
+.btn-icon:hover {
+    color: var(--nkap-blue-dark);
+    transform: scale(1.15);
+}
+
+.account-list {
+    padding: 4px 0;
+}
+
+.account-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.account-item:hover {
+    background: var(--nkap-blue-light);
+}
+
+.account-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.savings-icon  { background: #e8f8f0; color: var(--nkap-green); }
+.credit-icon   { background: #fdecea; color: var(--nkap-red); }
+
+.account-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.account-name {
+    font-size: 0.88rem;
+    font-weight: bold;
+    color: var(--text-dark);
+    font-family: 'Bree Serif', serif;
+}
+
+.account-balance {
+    font-size: 0.83rem;
+    color: var(--nkap-green);
+    font-family: 'Bree Serif', serif;
+}
+
+.account-balance.negative {
+    color: var(--nkap-red);
+}
+
+.accounts-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px 8px;
+    border-top: 1px solid var(--sidebar-border);
+    margin-top: 6px;
+}
+
+.total-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.total-amount {
+    font-size: 1rem;
+    color: var(--nkap-blue);
+}
+
+/* User / Logout row */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.user-avatar-icon {
+    font-size: 1.4rem;
+    color: var(--nkap-blue);
+    flex-shrink: 0;
+}
+
+.user-email {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: 'Bree Serif', serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.btn-logout {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-logout:hover {
+    background: #fdecea;
+    color: var(--nkap-red);
+}
+
+/* ══════════════════════════════════════════
+   COLUMN 2 — BUDGET PLAN (col-8)
+══════════════════════════════════════════ */
+.budget-main {
+    background: #f0f4f8;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.budget-main-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 20px 28px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+}
+
+.budget-main-header h5 {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.budget-period {
+    font-size: 0.85rem;
+    font-family: 'Bree Serif', serif;
+}
+
+/* Empty state */
+.budget-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.empty-icon-wrap {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: var(--nkap-blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.empty-icon {
+    font-size: 2.4rem;
+    color: var(--nkap-blue);
+}
+
+.empty-title {
+    font-size: 1.15rem;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.empty-subtitle {
+    font-size: 0.88rem;
+    max-width: 300px;
+    margin: 0 auto 28px;
+    font-family: sans-serif;
+    line-height: 1.5;
+}
+
+.btn-create-budget {
+    font-family: 'Bree Serif', serif;
+    font-size: 1rem;
+    padding: 12px 36px;
+    border-radius: 24px;
+    background: var(--nkap-blue);
+    border: 2px solid var(--nkap-blue);
+    color: #fff;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(36, 160, 237, 0.3);
+}
+
+.btn-create-budget:hover {
+    background: var(--nkap-blue-dark);
+    border-color: var(--nkap-blue-dark);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(36, 160, 237, 0.4);
+}
+
+/* ══════════════════════════════════════════
+   COLUMN 3 — GROUPS PANEL (col-2)
+══════════════════════════════════════════ */
+.groups-panel {
+    background: var(--panel-bg);
+    border-left: 2px solid var(--panel-border);
+    height: 100%;
+    overflow: hidden;
+}
+
+.groups-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 18px 12px;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.groups-panel-header h6 {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.groups-list {
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+/* Group blocks */
+.group-block {
+    margin-bottom: 4px;
+}
+
+.group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    font-weight: bold;
+    color: var(--text-dark);
+    background: var(--sidebar-bg);
+    cursor: pointer;
+    user-select: none;
+}
+
+.group-title:hover {
+    background: var(--nkap-blue-light);
+}
+
+.group-icon {
+    color: var(--nkap-blue);
+    width: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.group-total {
+    font-size: 0.85rem;
+    color: var(--nkap-red);
+}
+
+.group-transactions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.group-tx {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 18px 6px 42px;
+    font-size: 0.82rem;
+    font-family: sans-serif;
+    color: var(--text-dark);
+    border-bottom: 1px solid #f0f4f8;
+    transition: background 0.12s;
+}
+
+.group-tx:hover {
+    background: var(--nkap-blue-light);
+}
+
+.tx-name {
+    color: #4a5568;
+}
+
+.tx-amount {
+    font-weight: bold;
+    color: var(--nkap-red);
+    font-family: 'Bree Serif', serif;
+}
+
+/* Placeholder note */
+.groups-placeholder-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 16px;
+    padding: 12px;
+    background: var(--nkap-blue-light);
+    border-radius: 10px;
+    font-size: 0.78rem;
+    color: var(--nkap-blue-dark);
+    font-family: sans-serif;
+    line-height: 1.5;
+}
+
+.groups-placeholder-note i {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   Bootstrap datepicker overrides
+══════════════════════════════════════════ */
+.datepicker table tr td.active,
+.datepicker table tr td.active:hover,
+.datepicker table tr td span.active,
+.datepicker table tr td span.active:hover {
+    background-color: var(--nkap-blue) !important;
+    border-color: var(--nkap-blue) !important;
+}
+
+.datepicker table tr td:hover,
+.datepicker table tr td span:hover {
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue-dark);
+}
