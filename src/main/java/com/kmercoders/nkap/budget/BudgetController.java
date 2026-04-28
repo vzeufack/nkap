@@ -1,23 +1,68 @@
 package com.kmercoders.nkap.budget;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.appuser.AppUserRepository;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
+@RequestMapping("/users/{userId}/budgets")
 public class BudgetController {
 
-   @GetMapping(value = {"/"})
-   public String showBudgets(ModelMap model) {      
-      return "home";
+   private final BudgetRepository budgetRepository;
+   private final AppUserRepository userRepository;
+
+   public BudgetController(BudgetRepository budgetRepository, AppUserRepository userRepository) {
+      this.budgetRepository = budgetRepository;
+      this.userRepository = userRepository;
+   }
+
+   // GET /users/{userId}/budgets
+   @GetMapping
+   public String listBudgets(@PathVariable Long userId, Model model) {
+      AppUser user = userRepository.findById(userId)
+               .orElseThrow(() -> new RuntimeException("User not found"));
+      model.addAttribute("user", user);
+      model.addAttribute("budgets", budgetRepository.findByUserId(userId));
+      return "budgets/list";
+   }
+
+   // GET /users/{userId}/budgets/new
+   // @GetMapping("/new")
+   // public String showCreateForm(@PathVariable Long userId, Model model) {
+   //    AppUser user = userRepository.findById(userId)
+   //             .orElseThrow(() -> new RuntimeException("User not found"));
+   //    model.addAttribute("user", user);
+   //    model.addAttribute("budget", new Budget());
+   //    return "budgets/form";
+   // }
+
+   // POST /users/{userId}/budgets
+   @PostMapping
+   public String createBudget(@PathVariable Long userId,
+                              @ModelAttribute Budget budget,
+                              RedirectAttributes redirectAttributes) {
+      AppUser user = userRepository.findById(userId)
+               .orElseThrow(() -> new RuntimeException("User not found"));
+      budget.setAppUser(user);
+      budgetRepository.save(budget);
+      redirectAttributes.addFlashAttribute("success", "Budget created successfully.");
+      return "redirect:/users/" + userId + "/budgets";
+   }
+
+   // GET /users/{userId}/budgets/{id}/edit
+   @GetMapping("/{id}/edit")
+   public String showEditForm(@PathVariable Long userId,
+                              @PathVariable Long id,
+                              Model model) {
+      AppUser user = userRepository.findById(userId)
+               .orElseThrow(() -> new RuntimeException("User not found"));
+      Budget budget = budgetRepository.findByIdAndUserId(id, userId)
+               .orElseThrow(() -> new RuntimeException("Budget not found"));
+      model.addAttribute("user", user);
+      model.addAttribute("budget", budget);
+      return "budgets/form";
    }
 }

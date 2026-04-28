@@ -1,7 +1,11 @@
 package com.kmercoders.nkap.appuser;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
+import com.kmercoders.nkap.budget.Budget;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -27,6 +31,9 @@ public class AppUser {
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "appUser")
     private Set<Authority> authorities = new HashSet<>();
+
+	@OneToMany(mappedBy = "appUser", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Budget> budgets = new ArrayList<>();
 
 	public AppUser() {
 	}
@@ -68,4 +75,12 @@ public class AppUser {
     public void setAuthorities(Set<Authority> authorities) {
         this.authorities = authorities;
     }
+
+	public List<Budget> getBudgets() {
+		return budgets;
+	}
+
+	public void setBudgets(List<Budget> budgets) {
+		this.budgets = budgets;
+	}
 }
