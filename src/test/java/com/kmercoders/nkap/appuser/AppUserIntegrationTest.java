@@ -14,6 +14,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDate;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -96,12 +98,17 @@ class AppUserIntegrationTest {
             .andExpect(model().attributeExists("error"));
     }
 
+    private String budgetRedirectUrl() {
+        LocalDate now = LocalDate.now();
+        return "/budgets/" + now.getMonth() + "/" + now.getYear();
+    }
+
     @Test
     @WithMockUser
     void register_authenticatedUser_redirectsToHome() throws Exception {
         mockMvc.perform(get("/register"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl(budgetRedirectUrl()));
     }
 
     @Test
@@ -130,7 +137,7 @@ class AppUserIntegrationTest {
                 .param("email", "new@example.com")
                 .param("password", "somepassword"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl(budgetRedirectUrl()));
     }
 
     @Test
@@ -151,7 +158,7 @@ class AppUserIntegrationTest {
                 .param("email", "user@example.com")
                 .param("password", "somepassword"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl(budgetRedirectUrl()));
     }
 
     @Test
@@ -159,7 +166,7 @@ class AppUserIntegrationTest {
     void login_authenticatedUser_redirectsToHome() throws Exception {
         mockMvc.perform(get("/login"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/"));
+            .andExpect(redirectedUrl(budgetRedirectUrl()));
     }
 
     @Test

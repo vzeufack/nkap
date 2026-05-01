@@ -7,9 +7,8 @@ import com.kmercoders.nkap.appuser.AppUser;
 
 @Entity
 @Table(
-    name = "budgets",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"app_user_id", "month", "year"})
+        @UniqueConstraint(columnNames = {"app_user_id", "budget_month", "budget_year"})
     }
 )
 public class Budget {
@@ -19,10 +18,10 @@ public class Budget {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "budget_month", nullable = false)
     private Month month;
 
-    @Column(nullable = false)
+    @Column(name = "budget_year", nullable = false)
     private int year;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
