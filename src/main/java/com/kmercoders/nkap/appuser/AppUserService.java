@@ -4,11 +4,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AppUserService {
+public class AppUserService implements UserDetailsService{
    private final AppUserRepository userRepo;
    private final BCryptPasswordEncoder passwordEncoder;
    
@@ -33,9 +36,17 @@ public class AppUserService {
         return user;
     }
 
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        return userRepo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+    }
+
     public AppUser getAuthenticatedUser() {
-      return (AppUser) SecurityContextHolder.getContext()
-              .getAuthentication()
-              .getPrincipal();
+      String email = SecurityContextHolder.getContext()
+                       .getAuthentication()
+                       .getName();
+      return userRepo.findByEmail(email)
+                         .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
     }
 }

@@ -16,9 +16,9 @@ import java.time.LocalDate;
 
 @Configuration
 public class SecurityConfig {
-    private final AppUserDetailsServiceImpl userDetailsService;
+    private final AppUserService userDetailsService;
 
-    public SecurityConfig(AppUserDetailsServiceImpl userDetailsService) {
+    public SecurityConfig(AppUserService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 

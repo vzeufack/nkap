@@ -4,6 +4,7 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserRepository;
 import com.kmercoders.nkap.appuser.AppUserService;
 
+import java.time.LocalDate;
 import java.time.Month;
 
 import org.springframework.stereotype.Controller;
@@ -25,13 +26,12 @@ public class BudgetController {
 
    @GetMapping("/{month}/{year}")
    public String showBudget(@PathVariable("month") Month month,
-                           @PathVariable("year") int year,
-                           Model model) {
+                            @PathVariable("year") int year,
+                            Model model) {
       AppUser appUser = appUserService.getAuthenticatedUser();
-      //Budget budget = budgetRepository.findByAppUserIdAndMonthAndYear(appUser.getId(), month, year)
-               //.orElseThrow(() -> new RuntimeException("Budget not found"));
+      Budget budget = budgetRepository.findByAppUserIdAndMonthAndYear(appUser.getId(), month, year).orElse(null);
       model.addAttribute("appUser", appUser);
-      //model.addAttribute("budget", budget);
+      model.addAttribute("budget", budget);
       return "home";
    }
 
@@ -55,18 +55,27 @@ public class BudgetController {
    //    return "budgets/form";
    // }
 
-   // POST /users/{appUserId}/budgets
-   // @PostMapping
-   // public String createBudget(@PathVariable Long appUserId,
-   //                            @ModelAttribute Budget budget,
-   //                            RedirectAttributes redirectAttributes) {
-   //    AppUser user = userRepository.findById(appUserId)
-   //             .orElseThrow(() -> new RuntimeException("User not found"));
-   //    budget.setAppUser(user);
-   //    budgetRepository.save(budget);
-   //    redirectAttributes.addFlashAttribute("success", "Budget created successfully.");
-   //    return "redirect:/users/" + appUserId + "/budgets";
-   // }
+   //POST /users/{appUserId}/budgets
+   @PostMapping("/create/{month}/{year}")
+   public String createBudget(@PathVariable("month") Month month,
+                              @PathVariable("year") int year,
+                              RedirectAttributes redirectAttributes) {
+      AppUser appUser = appUserService.getAuthenticatedUser();
+
+      if (budgetRepository.existsByAppUserAndMonthAndYear(appUser, month, year)) {
+         redirectAttributes.addFlashAttribute("error",
+                  "A budget for " + month + " " + year + " already exists.");
+         return "redirect:/budgets/" + month + "/" + year;
+      }
+
+      Budget budget = new Budget();
+      budget.setAppUser(appUser);
+      budget.setMonth(month);
+      budget.setYear(year);
+      budgetRepository.save(budget);
+      redirectAttributes.addFlashAttribute("success", "Budget created successfully.");
+      return "redirect:/budgets/" + month + "/" + year;
+   }
 
    // // GET /users/{appUserId}/budgets/{id}/edit
    // @GetMapping("/{id}/edit")

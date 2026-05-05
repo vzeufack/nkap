@@ -10,20 +10,20 @@
 <div class="container-fluid p-0 page-wrapper">
 
     <!-- ═══════════════════════════════════════════
-         ROW 1 — HEADER BAR  (col-2 | col-7 | col-3)
+         ROW 1 — HEADER BAR  (col-3 | col-6 | col-3)
          mirrors exactly the content row below
     ═══════════════════════════════════════════ -->
     <div class="row no-gutters header-bar align-items-center">
 
-        <!-- H-Col 1: Logo — aligns over sidebar (col-2) -->
-        <div class="col-2 logo-col d-flex align-items-center justify-content-center">
+        <!-- H-Col 1: Logo — aligns over sidebar (col-3) -->
+        <div class="col-3 logo-col d-flex align-items-center justify-content-center">
             <span class="bree-serif nkap-logo">
                 <i class="fas fa-wallet"></i> nkap
             </span>
         </div>
 
-        <!-- H-Col 2: Month navigator — aligns over budget plan (col-7) -->
-        <div class="col-7 month-col d-flex align-items-center justify-content-center">
+        <!-- H-Col 2: Month navigator — aligns over budget plan (col-6) -->
+        <div class="col-6 month-col d-flex align-items-center justify-content-center">
             <div class="month-nav-wrap d-flex align-items-center">
                 <button class="btn btn-month-nav" id="btnPrevMonth" title="Previous month">
                     <i class="fas fa-chevron-left"></i>
@@ -68,8 +68,8 @@
     ═══════════════════════════════════════════ -->
     <div class="row no-gutters content-row">
 
-        <!-- C-Col 1: Sidebar (col-2) -->
-        <div class="col-2 sidebar d-flex flex-column">
+        <!-- C-Col 1: Sidebar (col-3) -->
+        <div class="col-3 sidebar d-flex flex-column">
 
             <!-- Sidebar Row 1: Vertical nav -->
             <div class="sidebar-section sidebar-nav-section">
@@ -156,8 +156,8 @@
 
         </div>
 
-        <!-- C-Col 2: Budget Plan (col-7) -->
-        <div class="col-7 budget-main d-flex flex-column">
+        <!-- C-Col 2: Budget Plan (col-6) -->
+        <div class="col-6 budget-main d-flex flex-column">
 
             <div class="budget-main-header">
                 <h5 class="bree-serif mb-0">Budget Plan</h5>
@@ -173,7 +173,7 @@
                 </div>
                 <p class="empty-title bree-serif">No budget yet for this period</p>
                 <p class="empty-subtitle text-muted">Set up your monthly plan to start tracking income and expenses.</p>
-                <button class="btn btn-create-budget">
+                <button class="btn btn-create-budget" onclick="goToCreateBudget()">
                     <i class="fas fa-plus mr-2"></i>Create Budget
                 </button>
             </div>

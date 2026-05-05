@@ -2,6 +2,21 @@
 
 $(document).ready(function () {
 
+    // ── Derive current month/year from URL ──
+    // Expected URL format: /budgets/{MONTH}/{YEAR}
+    function getDateFromUrl() {
+        const parts = window.location.pathname.split('/');
+        // parts: ["", "budgets", "JANUARY", "2026"]
+        const monthStr = parts[2];
+        const yearStr  = parts[3];
+
+        if (monthStr && yearStr) {
+            const parsed = new Date(`${monthStr} 1, ${yearStr}`);
+            if (!isNaN(parsed)) return parsed;
+        }
+        return new Date(); // fallback to today
+    }
+
     // ── Month-only datepicker ──
     const $picker = $('#monthPicker');
 
@@ -13,23 +28,29 @@ $(document).ready(function () {
         todayHighlight: true
     });
 
-    // Set to current month on load if empty
-    if (!$picker.val()) {
-        $picker.datepicker('setDate', new Date());
-    }
+    // Initialize picker from URL, not from today
+    $picker.datepicker('setDate', getDateFromUrl());
 
     // Helper: get current picker date
     function getPickerDate() {
         return $picker.datepicker('getDate') || new Date();
     }
 
-    // Helper: set picker date and optionally reload page
+    // Helper: get full month name (e.g. "JANUARY")
+    function getMonthName(date) {
+        return date.toLocaleString('default', { month: 'long' }).toUpperCase();
+    }
+
+    // Helper: navigate to a given date's budget page
+    function navigateTo(date) {
+        const month = getMonthName(date);
+        const year  = date.getFullYear();
+        window.location.href = `/budgets/${month}/${year}`;
+    }
+
+    // Helper: set picker date without triggering navigation
     function setPickerDate(date) {
         $picker.datepicker('setDate', date);
-        // Uncomment to reload page with selected month:
-        // const yyyy = date.getFullYear();
-        // const mm   = String(date.getMonth() + 1).padStart(2, '0');
-        // window.location.href = '/budget?month=' + yyyy + '-' + mm;
     }
 
     // ── Previous month ──
@@ -37,7 +58,7 @@ $(document).ready(function () {
         const d = getPickerDate();
         d.setDate(1);
         d.setMonth(d.getMonth() - 1);
-        setPickerDate(d);
+        navigateTo(d);
     });
 
     // ── Next month ──
@@ -45,19 +66,35 @@ $(document).ready(function () {
         const d = getPickerDate();
         d.setDate(1);
         d.setMonth(d.getMonth() + 1);
-        setPickerDate(d);
+        navigateTo(d);
     });
 
     // ── Today (current month) ──
     $('#btnToday').on('click', function () {
-        setPickerDate(new Date());
+        navigateTo(new Date());
     });
 
-    // ── React to manual datepicker selection ──
+    // ── Create Budget — POST to /budgets/create/{month}/{year} ──
+    window.goToCreateBudget = function () {
+        const d     = getPickerDate();
+        const month = getMonthName(d);
+        const year  = d.getFullYear();
+
+        fetch(`/budgets/create/${month}/${year}`, { method: 'POST' })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    window.location.href = `/budgets/${month}/${year}`;
+                } else {
+                    console.error('Failed to create budget:', response.status);
+                }
+            })
+            .catch(err => console.error('Error creating budget:', err));
+    };
+
+    // ── React to manual datepicker selection only ──
     $picker.on('changeDate', function (e) {
-        const yyyy = e.date.getFullYear();
-        const mm   = String(e.date.getMonth() + 1).padStart(2, '0');
-        console.log('Period selected:', yyyy + '-' + mm);
-        // window.location.href = '/budget?month=' + yyyy + '-' + mm;
+        navigateTo(e.date);
     });
 });

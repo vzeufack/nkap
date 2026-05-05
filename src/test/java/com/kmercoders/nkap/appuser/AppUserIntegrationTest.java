@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 
@@ -138,6 +139,8 @@ class AppUserIntegrationTest {
                 .param("password", "somepassword"))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl(budgetRedirectUrl()));
+        
+        assertThat(userRepository.findByEmail("new@example.com")).isPresent();
     }
 
     @Test

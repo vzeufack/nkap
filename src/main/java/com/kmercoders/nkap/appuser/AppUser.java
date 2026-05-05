@@ -1,9 +1,13 @@
 package com.kmercoders.nkap.appuser;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.kmercoders.nkap.budget.Budget;
 
@@ -17,7 +21,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 
 @Entity
-public class AppUser {
+public class AppUser implements UserDetails{
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(nullable = false, updatable = false)
@@ -60,6 +64,7 @@ public class AppUser {
         this.email = email;
     }
 
+	@Override
 	public String getPassword() {
 		return password;
 	}
@@ -68,6 +73,7 @@ public class AppUser {
 		this.password = password;
 	}
 
+    @Override
     public Set<Authority> getAuthorities() {
         return authorities;
     }
@@ -82,5 +88,15 @@ public class AppUser {
 
 	public void setBudgets(List<Budget> budgets) {
 		this.budgets = budgets;
-	}
+	}	
+
+    @Override
+    public String getUsername() {
+        return email; 
+    }
+
+    @Override public boolean isAccountNonExpired()     { return true; }
+    @Override public boolean isAccountNonLocked()      { return true; }
+    @Override public boolean isCredentialsNonExpired() { return true; }
+    @Override public boolean isEnabled()               { return true; }
 }
