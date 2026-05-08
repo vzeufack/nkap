@@ -16,12 +16,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
-import java.time.LocalDate;
-
 @Controller
 public class AppUserController {
     private static final String REGISTER = "register";
     private static final String ERROR = "error";
+    private static final String HOME_REDIRECT = "redirect:/budgets/";
     private AppUserService userService;
 
     public AppUserController(AppUserService userService) {
@@ -34,15 +33,10 @@ public class AppUserController {
                 && !(authentication instanceof AnonymousAuthenticationToken);
     }
 
-    private String budgetRedirect() {
-        LocalDate now = LocalDate.now();
-        return "redirect:/budgets/" + now.getMonth() + "/" + now.getYear();
-    }
-
     @GetMapping(value = "/login")
     public String getLogin(ModelMap model, Authentication authentication) {
         if (isFullyAuthenticated(authentication)) {
-            return budgetRedirect();
+            return HOME_REDIRECT;
         }
 
         model.put("appUserDTO", new AppUserDTO());
@@ -52,7 +46,7 @@ public class AppUserController {
     @GetMapping(value = "/register")
     public String getRegister(ModelMap model, Authentication authentication) {
         if (isFullyAuthenticated(authentication)) {
-            return budgetRedirect();
+            return HOME_REDIRECT;
         }
 
         model.put("appUserDTO", new AppUserDTO());
@@ -84,6 +78,6 @@ public class AppUserController {
         new HttpSessionSecurityContextRepository()
                 .saveContext(SecurityContextHolder.getContext(), request, response);
 
-        return budgetRedirect();
+        return HOME_REDIRECT;
     }
 }

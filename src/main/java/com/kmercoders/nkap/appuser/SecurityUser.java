@@ -2,8 +2,6 @@ package com.kmercoders.nkap.appuser;
 
 import java.util.Set;
 
-import org.springframework.security.core.userdetails.UserDetails;
-
 public class SecurityUser extends AppUser{
     private static final long serialVersionUID = 1L;
    

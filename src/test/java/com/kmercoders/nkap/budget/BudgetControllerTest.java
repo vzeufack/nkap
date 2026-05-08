@@ -12,16 +12,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
+import java.time.LocalDate;
 import java.time.Month;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -96,5 +98,108 @@ class BudgetControllerTest {
                 MONTH,
                 YEAR
         )).isEqualTo(1);
+    }
+
+    // ── showCurrentBudget (/budgets/) ────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void showCurrentBudget_shouldReturnHomeView_whenBudgetExists() throws Exception {
+        // Seed a budget for the current month/year
+        AppUser appUser = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        LocalDate today = LocalDate.now();
+        Month currentMonth = today.getMonth();
+        int currentYear = today.getYear();
+
+        Budget budget = new Budget();
+        budget.setAppUser(appUser);
+        budget.setMonth(currentMonth);
+        budget.setYear(currentYear);
+        budgetRepository.save(budget);
+
+        mockMvc.perform(get("/budgets/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(model().attributeExists("appUser"))
+                .andExpect(model().attribute("budget",
+                    org.hamcrest.Matchers.hasProperty("id", org.hamcrest.Matchers.is(budget.getId()))))
+                .andExpect(model().attribute("currentMonth", currentMonth + " " + currentYear))
+                .andExpect(model().attribute("currentMonthValue", currentMonth.name()))
+                .andExpect(model().attribute("currentYearValue", currentYear));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void showCurrentBudget_shouldReturnHomeView_whenNoBudgetExists() throws Exception {
+        // No budget seeded — controller should pass null to the model
+        LocalDate today = LocalDate.now();
+        Month currentMonth = today.getMonth();
+        int currentYear = today.getYear();
+
+        mockMvc.perform(get("/budgets/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(model().attributeExists("appUser"))
+                .andExpect(model().attribute("budget", org.hamcrest.Matchers.nullValue()))
+                .andExpect(model().attribute("currentMonth", currentMonth + " " + currentYear))
+                .andExpect(model().attribute("currentMonthValue", currentMonth.name()))
+                .andExpect(model().attribute("currentYearValue", currentYear));
+    }
+
+    // ── showBudget (/{month}/{year}) ─────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void showBudget_shouldReturnHomeView_whenNoHtmxHeader() throws Exception {
+        // Seed a budget for the test month/year
+        AppUser appUser = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Budget budget = new Budget();
+        budget.setAppUser(appUser);
+        budget.setMonth(MONTH);
+        budget.setYear(YEAR);
+        budgetRepository.save(budget);
+
+        mockMvc.perform(get("/budgets/{month}/{year}", MONTH, YEAR))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(model().attribute("budget",
+                    org.hamcrest.Matchers.hasProperty("id", org.hamcrest.Matchers.is(budget.getId()))))
+                .andExpect(model().attribute("currentMonth", MONTH + " " + YEAR))
+                .andExpect(model().attribute("currentMonthValue", MONTH.name()))
+                .andExpect(model().attribute("currentYearValue", YEAR));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void showBudget_shouldReturnFragment_whenHtmxHeaderPresent() throws Exception {
+        AppUser appUser = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Budget budget = new Budget();
+        budget.setAppUser(appUser);
+        budget.setMonth(MONTH);
+        budget.setYear(YEAR);
+        budgetRepository.save(budget);
+
+        mockMvc.perform(get("/budgets/{month}/{year}", MONTH, YEAR)
+                    .header("HX-Request", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("fragments/budget-plan :: budget-plan"))
+                .andExpect(model().attribute("budget",
+                    org.hamcrest.Matchers.hasProperty("id", org.hamcrest.Matchers.is(budget.getId()))))
+                .andExpect(model().attribute("currentMonth", MONTH + " " + YEAR))
+                .andExpect(model().attribute("currentMonthValue", MONTH.name()))
+                .andExpect(model().attribute("currentYearValue", YEAR));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void showBudget_shouldPassNullBudget_whenNoBudgetExistsForPeriod() throws Exception {
+        // No budget seeded for MONTH/YEAR
+        mockMvc.perform(get("/budgets/{month}/{year}", MONTH, YEAR))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(model().attribute("budget", org.hamcrest.Matchers.nullValue()))
+                .andExpect(model().attribute("currentMonth", MONTH + " " + YEAR))
+                .andExpect(model().attribute("currentMonthValue", MONTH.name()))
+                .andExpect(model().attribute("currentYearValue", YEAR));
     }
 }

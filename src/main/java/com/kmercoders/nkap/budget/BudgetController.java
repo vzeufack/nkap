@@ -1,7 +1,6 @@
 package com.kmercoders.nkap.budget;
 
 import com.kmercoders.nkap.appuser.AppUser;
-import com.kmercoders.nkap.appuser.AppUserRepository;
 import com.kmercoders.nkap.appuser.AppUserService;
 
 import java.time.LocalDate;
@@ -24,38 +23,38 @@ public class BudgetController {
       this.appUserService = appUserService;
    }
 
+   @GetMapping("/")
+   public String showCurrentBudget(Model model) {
+      AppUser appUser = appUserService.getAuthenticatedUser();
+      LocalDate today = LocalDate.now();
+      Month currentMonth = today.getMonth();
+      int currentYear = today.getYear();
+
+      Budget budget = budgetRepository.findByAppUserIdAndMonthAndYear(appUser.getId(), currentMonth, currentYear).orElse(null);
+      model.addAttribute("appUser", appUser);
+      model.addAttribute("budget", budget);
+      model.addAttribute("currentMonth", currentMonth + " " + currentYear);
+      model.addAttribute("currentMonthValue", currentMonth.name());        // e.g. "APRIL"
+      model.addAttribute("currentYearValue", currentYear); 
+      return "home";
+   }
+
    @GetMapping("/{month}/{year}")
    public String showBudget(@PathVariable("month") Month month,
-                            @PathVariable("year") int year,
-                            Model model) {
+                           @PathVariable("year") int year,
+                           @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
+                           Model model) {
       AppUser appUser = appUserService.getAuthenticatedUser();
       Budget budget = budgetRepository.findByAppUserIdAndMonthAndYear(appUser.getId(), month, year).orElse(null);
       model.addAttribute("appUser", appUser);
       model.addAttribute("budget", budget);
-      return "home";
+      model.addAttribute("currentMonth", month + " " + year);
+      model.addAttribute("currentMonthValue", month.name());
+      model.addAttribute("currentYearValue", year);
+
+      return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
    }
 
-   // GET /users/{appUserId}/budgets
-   // @GetMapping
-   // public String listBudgets(@PathVariable Long appUserId, Model model) {
-   //    AppUser appUser = userRepository.findById(appUserId)
-   //             .orElseThrow(() -> new RuntimeException("User not found"));
-   //    model.addAttribute("user", user);
-   //    model.addAttribute("budgets", budgetRepository.findByAppUserId(appUserId));
-   //    return "budgets/list";
-   // }
-
-   // GET /users/{appUserId}/budgets/new
-   // @GetMapping("/new")
-   // public String showCreateForm(@PathVariable Long appUserId, Model model) {
-   //    AppUser user = userRepository.findById(appUserId)
-   //             .orElseThrow(() -> new RuntimeException("User not found"));
-   //    model.addAttribute("user", user);
-   //    model.addAttribute("budget", new Budget());
-   //    return "budgets/form";
-   // }
-
-   //POST /users/{appUserId}/budgets
    @PostMapping("/create/{month}/{year}")
    public String createBudget(@PathVariable("month") Month month,
                               @PathVariable("year") int year,
@@ -76,18 +75,4 @@ public class BudgetController {
       redirectAttributes.addFlashAttribute("success", "Budget created successfully.");
       return "redirect:/budgets/" + month + "/" + year;
    }
-
-   // // GET /users/{appUserId}/budgets/{id}/edit
-   // @GetMapping("/{id}/edit")
-   // public String showEditForm(@PathVariable Long appUserId,
-   //                            @PathVariable Long id,
-   //                            Model model) {
-   //    AppUser user = userRepository.findById(appUserId)
-   //             .orElseThrow(() -> new RuntimeException("User not found"));
-   //    Budget budget = budgetRepository.findByIdAndAppUserId(id, appUserId)
-   //             .orElseThrow(() -> new RuntimeException("Budget not found"));
-   //    model.addAttribute("user", user);
-   //    model.addAttribute("budget", budget);
-   //    return "budgets/form";
-   // }
 }

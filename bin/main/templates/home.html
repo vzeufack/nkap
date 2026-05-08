@@ -24,7 +24,9 @@
 
         <!-- H-Col 2: Month navigator — aligns over budget plan (col-6) -->
         <div class="col-6 month-col d-flex align-items-center justify-content-center">
-            <div class="month-nav-wrap d-flex align-items-center">
+            <div class="month-nav-wrap d-flex align-items-center"
+                th:data-month="${currentMonthValue}"
+                th:data-year="${currentYearValue}">
                 <button class="btn btn-month-nav" id="btnPrevMonth" title="Previous month">
                     <i class="fas fa-chevron-left"></i>
                 </button>
@@ -156,102 +158,8 @@
 
         </div>
 
-        <!-- C-Col 2: Budget Plan (col-6) -->
-        <div class="col-6 budget-main d-flex flex-column">
-
-            <div class="budget-main-header">
-                <h5 class="bree-serif mb-0">Budget Plan</h5>
-                <span class="budget-period text-muted"
-                      th:text="${currentMonth ?: 'April 2025'}">April 2025</span>
-            </div>
-
-            <!-- Empty state -->
-            <div class="budget-empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center"
-                 th:if="${budget == null}">
-                <div class="empty-icon-wrap mb-4">
-                    <i class="fas fa-clipboard-list empty-icon"></i>
-                </div>
-                <p class="empty-title bree-serif">No budget yet for this period</p>
-                <p class="empty-subtitle text-muted">Set up your monthly plan to start tracking income and expenses.</p>
-                <button class="btn btn-create-budget" onclick="goToCreateBudget()">
-                    <i class="fas fa-plus mr-2"></i>Create Budget
-                </button>
-            </div>
-
-            <!-- Budget content (when budget exists) -->
-            <div class="budget-content flex-grow-1" th:if="${budget != null}">
-                <!-- Budget groups/categories rendered here -->
-            </div>
-
-        </div>
-
-        <!-- C-Col 3: Groups & Transactions (col-3) -->
-        <div class="col-3 groups-panel d-flex flex-column">
-
-            <div class="groups-panel-header">
-                <h6 class="bree-serif mb-0">Groups</h6>
-                <button class="btn-icon" title="Add group"><i class="fas fa-plus-circle"></i></button>
-            </div>
-
-            <div class="groups-list flex-grow-1">
-
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-home group-icon"></i>
-                        <span>Housing</span>
-                        <span class="group-total ml-auto">$1,200.00</span>
-                    </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Rent</span>
-                            <span class="tx-amount">$1,200.00</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-utensils group-icon"></i>
-                        <span>Food</span>
-                        <span class="group-total ml-auto">$430.00</span>
-                    </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Groceries</span>
-                            <span class="tx-amount">$280.00</span>
-                        </li>
-                        <li class="group-tx">
-                            <span class="tx-name">Restaurants</span>
-                            <span class="tx-amount">$150.00</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-car group-icon"></i>
-                        <span>Transport</span>
-                        <span class="group-total ml-auto">$210.00</span>
-                    </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Gas</span>
-                            <span class="tx-amount">$90.00</span>
-                        </li>
-                        <li class="group-tx">
-                            <span class="tx-name">Uber</span>
-                            <span class="tx-amount">$120.00</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="groups-placeholder-note">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Groups and linked transactions will appear here based on your budget plan.</span>
-                </div>
-
-            </div>
-
+        <div id="budget-plan-container" class="col-9 d-flex p-0" style="height: 100%;">
+            <th:block th:replace="~{fragments/budget-plan :: budget-plan}"></th:block>
         </div>
 
     </div><!-- end content row -->

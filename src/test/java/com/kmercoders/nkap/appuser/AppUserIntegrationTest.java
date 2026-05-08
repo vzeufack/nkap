@@ -100,8 +100,7 @@ class AppUserIntegrationTest {
     }
 
     private String budgetRedirectUrl() {
-        LocalDate now = LocalDate.now();
-        return "/budgets/" + now.getMonth() + "/" + now.getYear();
+        return "/budgets/";
     }
 
     @Test
