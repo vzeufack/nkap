@@ -107,4 +107,9 @@ $(document).ready(function () {
         navigateTo(getDateFromUrl());
     });
 
+    // Refresh fragment after a group is saved
+    document.addEventListener('nkap:groupSaved', function() {
+        navigateTo(getPickerDate());
+    });
+
 });

@@ -625,6 +625,310 @@ html, body {
 }
 
 /* ══════════════════════════════════════════
+   GROUP CARDS — Budget Plan column
+══════════════════════════════════════════ */
+.group-cards-container {
+    padding: 20px 24px;
+    overflow-y: auto;
+}
+
+.group-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* Card entry animation */
+.group-card {
+    background: var(--panel-bg);
+    border: 1.5px solid var(--panel-border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(36, 160, 237, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.group-card-new {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
+}
+
+.group-card-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.group-card:hover {
+    box-shadow: 0 6px 20px rgba(36, 160, 237, 0.13);
+    transform: translateY(-1px);
+}
+
+.group-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--sidebar-bg);
+}
+
+.group-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.group-card-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.group-card-name {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.group-card-badge {
+    font-size: 0.68rem;
+    font-family: sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    border: 1px solid rgba(36, 160, 237, 0.25);
+}
+
+.group-card-body {
+    padding: 14px 18px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+}
+
+.group-card-empty-note {
+    font-size: 0.82rem;
+    font-family: sans-serif;
+    font-style: italic;
+    margin: 0;
+    color: var(--text-muted);
+}
+
+/* Add Group button at bottom of list */
+.group-cards-add-row {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+}
+
+.btn-add-group-inline {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    padding: 9px 28px;
+    border-radius: 24px;
+    background: transparent;
+    border: 2px dashed var(--nkap-blue);
+    color: var(--nkap-blue);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-add-group-inline:hover {
+    background: var(--nkap-blue-light);
+    border-style: solid;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(36, 160, 237, 0.18);
+}
+
+/* Side panel animation */
+.group-block-new {
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.group-block-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ══════════════════════════════════════════
+   ADD GROUP MODAL
+══════════════════════════════════════════ */
+.nkap-modal {
+    border: none;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(36, 160, 237, 0.18), 0 4px 20px rgba(0,0,0,0.10);
+}
+
+.nkap-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px 16px;
+    border-bottom: 1.5px solid var(--panel-border);
+    background: var(--sidebar-bg);
+}
+
+.modal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-icon-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.nkap-modal-header .modal-title {
+    font-size: 1.05rem;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.nkap-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+    opacity: 1;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.nkap-modal-close:hover {
+    background: #fdecea;
+    color: var(--nkap-red);
+}
+
+.nkap-modal-body {
+    padding: 22px 24px 18px;
+}
+
+.modal-description {
+    font-size: 0.85rem;
+    font-family: sans-serif;
+    line-height: 1.55;
+    margin-bottom: 18px;
+}
+
+.nkap-input-label {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    font-weight: bold;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.nkap-input {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.95rem;
+    border: 1.5px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-dark);
+    background: var(--panel-bg);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nkap-input:focus {
+    border-color: var(--nkap-blue);
+    box-shadow: 0 0 0 3px rgba(36, 160, 237, 0.15);
+    outline: none;
+}
+
+.nkap-input.is-invalid {
+    border-color: var(--nkap-red);
+}
+
+.nkap-input.is-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15);
+}
+
+.nkap-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1.5px solid var(--panel-border);
+    background: var(--sidebar-bg);
+}
+
+.btn-modal-cancel {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    padding: 8px 20px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1.5px solid var(--panel-border);
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+}
+
+.btn-modal-cancel:hover {
+    background: #f0f4f8;
+    color: var(--text-dark);
+    border-color: #ccd4df;
+}
+
+.btn-modal-save {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    padding: 8px 22px;
+    border-radius: 20px;
+    background: var(--nkap-blue);
+    border: 2px solid var(--nkap-blue);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.btn-modal-save:hover:not(:disabled) {
+    background: var(--nkap-blue-dark);
+    border-color: var(--nkap-blue-dark);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(36, 160, 237, 0.35);
+}
+
+.btn-modal-save:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════
    Bootstrap datepicker overrides
 ══════════════════════════════════════════ */
 .datepicker table tr td.active,

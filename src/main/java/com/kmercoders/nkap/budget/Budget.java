@@ -2,8 +2,12 @@ package com.kmercoders.nkap.budget;
 
 import jakarta.persistence.*;
 import java.time.Month;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.group.Group;
 
 @Entity
 @Table(
@@ -28,6 +32,15 @@ public class Budget {
     @JoinColumn(name = "app_user_id", nullable = false)
     private AppUser appUser;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "budget_group_mapping",
+        joinColumns = @JoinColumn(name = "budget_id"),
+        inverseJoinColumns = @JoinColumn(name = "group_id")
+    )
+    @OrderBy("id ASC")
+    private Set<Group> groups = new LinkedHashSet<>();
+
     // Constructors
     public Budget() {}
 
@@ -48,4 +61,17 @@ public class Budget {
 
     public AppUser getAppUser() { return appUser; }
     public void setAppUser(AppUser appUser) { this.appUser = appUser; }
+
+    public Set<Group> getGroups() { return groups; }
+    public void setGroups(Set<Group> groups) { this.groups = groups; }
+
+    public void addGroup(Group group) {
+        this.groups.add(group);
+        group.getBudgets().add(this);
+    }
+
+    public void removeGroup(Group group) {
+        this.groups.remove(group);
+        group.getBudgets().remove(this);
+    }
 }

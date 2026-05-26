@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html xmlns:th="http://thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 
 <head>
 </head>
 
-<body>	
-	<th:block th:fragment="budget-plan">
-	  <!-- C-Col 2: Budget Plan (col-6) -->
+<body>
+    <th:block th:fragment="budget-plan">
+
+        <!-- ══ C-Col 2: Budget Plan ══ -->
         <div class="budget-main d-flex flex-column" style="flex: 2;">
 
             <div class="budget-main-header">
@@ -15,7 +16,7 @@
                       th:text="${currentMonth ?: 'April 2025'}">April 2025</span>
             </div>
 
-            <!-- Empty state -->
+            <!-- Empty state: no budget yet -->
             <div class="budget-empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center"
                  th:if="${budget == null}">
                 <div class="empty-icon-wrap mb-4">
@@ -28,80 +29,169 @@
                 </button>
             </div>
 
-            <!-- Budget content (when budget exists) -->
-            <div class="budget-content flex-grow-1" th:if="${budget != null}">
-                <!-- Budget groups/categories rendered here -->
-            </div>
+            <!-- Budget content: budget exists -->
+            <div class="budget-content flex-grow-1 d-flex flex-column"
+                 th:if="${budget != null}"
+                 th:attr="data-budget-id=${budget.id}">
 
+                <!-- Groups empty state -->
+                <div class="groups-empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center"
+                     th:if="${budget.groups == null or budget.groups.isEmpty()}">
+                    <div class="empty-icon-wrap mb-3">
+                        <i class="fas fa-layer-group empty-icon"></i>
+                    </div>
+                    <p class="empty-title bree-serif">No groups yet</p>
+                    <p class="empty-subtitle text-muted">Organise your budget by adding spending groups like Housing, Food, or Transport.</p>
+                    <button class="btn btn-create-budget" onclick="openAddGroupModal()">
+                        <i class="fas fa-plus mr-2"></i>Add Group
+                    </button>
+                </div>
+
+                <!-- Groups list (when groups exist) -->
+                <div class="group-cards-container flex-grow-1 d-flex flex-column"
+                     id="groupCardsContainer"
+                     th:if="${budget.groups != null and !budget.groups.isEmpty()}">
+
+                    <div class="group-cards-list" id="groupCardsList">
+                        <div class="group-card" th:each="group : ${budget.groups}">
+                            <div class="group-card-header">
+                                <div class="group-card-icon">
+                                    <i class="fas fa-layer-group"></i>
+                                </div>
+                                <div class="group-card-info">
+                                    <span class="group-card-name" th:text="${group.name}">Group Name</span>
+                                    <span class="group-card-badge" th:if="${group.isDefault()}">Default</span>
+                                </div>
+                                <div class="group-card-actions ml-auto">
+                                    <button class="btn-icon" title="More options">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="group-card-body">
+                                <p class="group-card-empty-note text-muted">No line items yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Group button at bottom of list -->
+                    <div class="group-cards-add-row">
+                        <button class="btn btn-add-group-inline" onclick="openAddGroupModal()">
+                            <i class="fas fa-plus-circle mr-2"></i>Add Group
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
 
-        <!-- C-Col 3: Groups & Transactions (col-3) -->
+        <!-- ══ C-Col 3: Groups Panel (summary) ══ -->
         <div class="groups-panel d-flex flex-column" style="flex: 1;">
 
             <div class="groups-panel-header">
                 <h6 class="bree-serif mb-0">Groups</h6>
-                <button class="btn-icon" title="Add group"><i class="fas fa-plus-circle"></i></button>
+                <button class="btn-icon" title="Add group" onclick="openAddGroupModal()">
+                    <i class="fas fa-plus-circle"></i>
+                </button>
             </div>
 
-            <div class="groups-list flex-grow-1">
+            <div class="groups-list flex-grow-1" id="groupsSidePanel">
 
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-home group-icon"></i>
-                        <span>Housing</span>
-                        <span class="group-total ml-auto">$1,200.00</span>
+                <th:block th:if="${budget != null and budget.groups != null and !budget.groups.isEmpty()}">
+                    <div class="group-block" th:each="group : ${budget.groups}">
+                        <div class="group-title">
+                            <i class="fas fa-layer-group group-icon"></i>
+                            <span th:text="${group.name}">Group</span>
+                            <span class="group-total ml-auto">$0.00</span>
+                        </div>
+                        <ul class="group-transactions">
+                            <li class="group-tx group-tx-empty">
+                                <span class="tx-name text-muted" style="font-style: italic;">No transactions yet</span>
+                            </li>
+                        </ul>
                     </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Rent</span>
-                            <span class="tx-amount">$1,200.00</span>
-                        </li>
-                    </ul>
-                </div>
+                </th:block>
 
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-utensils group-icon"></i>
-                        <span>Food</span>
-                        <span class="group-total ml-auto">$430.00</span>
-                    </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Groceries</span>
-                            <span class="tx-amount">$280.00</span>
-                        </li>
-                        <li class="group-tx">
-                            <span class="tx-name">Restaurants</span>
-                            <span class="tx-amount">$150.00</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="group-block">
-                    <div class="group-title">
-                        <i class="fas fa-car group-icon"></i>
-                        <span>Transport</span>
-                        <span class="group-total ml-auto">$210.00</span>
-                    </div>
-                    <ul class="group-transactions">
-                        <li class="group-tx">
-                            <span class="tx-name">Gas</span>
-                            <span class="tx-amount">$90.00</span>
-                        </li>
-                        <li class="group-tx">
-                            <span class="tx-name">Uber</span>
-                            <span class="tx-amount">$120.00</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="groups-placeholder-note">
+                <div class="groups-placeholder-note" th:if="${budget == null or budget.groups == null or budget.groups.isEmpty()}">
                     <i class="fas fa-info-circle"></i>
                     <span>Groups and linked transactions will appear here based on your budget plan.</span>
                 </div>
+
             </div>
         </div>
+
+        <!--
+            Fragment-scoped script: only openAddGroupModal() and saveGroup() live here.
+            The modal HTML itself lives in home.html (rendered once, never swapped)
+            so Bootstrap never ends up with duplicate/orphaned modals in <body>.
+        -->
+        <script th:inline="javascript">
+        /*<![CDATA[*/
+
+        function openAddGroupModal() {
+            var input = document.getElementById('groupNameInput');
+            input.value = '';
+            input.classList.remove('is-invalid');
+            document.getElementById('groupNameError').textContent = '';
+            $('#addGroupModal').modal('show');
+            setTimeout(function() { input.focus(); }, 300);
+        }
+
+        function saveGroup() {
+            var input   = document.getElementById('groupNameInput');
+            var name    = input.value.trim();
+            var errorEl = document.getElementById('groupNameError');
+
+            input.classList.remove('is-invalid');
+            if (!name) {
+                input.classList.add('is-invalid');
+                errorEl.textContent = 'Please enter a group name.';
+                input.focus();
+                return;
+            }
+
+            var budgetContent = document.querySelector('[data-budget-id]');
+            if (!budgetContent) { console.error('No budget id found'); return; }
+            var budgetId = budgetContent.getAttribute('data-budget-id');
+
+            var spinner = document.getElementById('btnSaveGroupSpinner');
+            var icon    = document.getElementById('btnSaveGroupIcon');
+            var btn     = document.getElementById('btnSaveGroup');
+            spinner.classList.remove('d-none');
+            icon.classList.add('d-none');
+            btn.disabled = true;
+
+            fetch('/budgets/' + budgetId + '/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Request failed: ' + response.status);
+                return response.json();
+            })
+            .then(function() {
+                $('#addGroupModal').modal('hide');
+                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+            })
+            .catch(function(err) {
+                console.error('Error saving group:', err);
+                input.classList.add('is-invalid');
+                errorEl.textContent = 'Something went wrong. Please try again.';
+            })
+            .finally(function() {
+                spinner.classList.add('d-none');
+                icon.classList.remove('d-none');
+                btn.disabled = false;
+            });
+        }
+
+        /*]]>*/
+        </script>
+
     </th:block>
+
 </body>
 
 </html>

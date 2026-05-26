@@ -15,12 +15,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.LocalDate;
-
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AppUserIntegrationTest {
+class AppUserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
