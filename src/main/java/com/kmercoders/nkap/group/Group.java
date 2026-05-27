@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kmercoders.nkap.budget.Budget;
 
 @Entity
@@ -20,6 +22,7 @@ public class Group {
     @Column(nullable = false)
     private boolean isDefault = false;
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "groups", fetch = FetchType.LAZY)
     private Set<Budget> budgets = new LinkedHashSet<>();
 

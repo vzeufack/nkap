@@ -38,7 +38,7 @@ public class GroupService {
     }
 
     @Transactional
-    public Group updateGroup(Long budgetId, Long groupId, GroupDTO dto) {
+    public GroupDTO updateGroup(Long budgetId, Long groupId, GroupDTO dto) {
         Group group = groupRepository.findByIdAndBudgetsId(groupId, budgetId)
                 .orElseThrow(() -> new IllegalArgumentException("Group not found in this budget."));
 
@@ -47,7 +47,8 @@ public class GroupService {
         }
 
         group.setName(dto.getName());
-        return groupRepository.save(group);
+        Group saved = groupRepository.save(group);
+        return new GroupDTO(saved.getId(), saved.getName(), saved.isDefault());
     }
 
     @Transactional

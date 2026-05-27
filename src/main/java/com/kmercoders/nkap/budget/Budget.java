@@ -38,7 +38,7 @@ public class Budget {
         joinColumns = @JoinColumn(name = "budget_id"),
         inverseJoinColumns = @JoinColumn(name = "group_id")
     )
-    @OrderBy("id ASC")
+    @OrderBy("isDefault DESC, name ASC")
     private Set<Group> groups = new LinkedHashSet<>();
 
     // Constructors

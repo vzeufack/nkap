@@ -223,6 +223,10 @@
             saveGroup();
         }
     });
+
+    $('#addGroupModal').on('shown.bs.modal', function() {
+        document.getElementById('groupNameInput').focus();
+    });
 </script>
 
 </body>
