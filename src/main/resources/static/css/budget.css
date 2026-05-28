@@ -715,6 +715,36 @@ html, body {
     border: 1px solid rgba(36, 160, 237, 0.25);
 }
 
+.group-card-actions {
+    display: flex;
+    align-items: center;
+}
+
+.btn-edit-group {
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 4px 6px;
+}
+
+.group-card-header:hover .btn-edit-group {
+    opacity: 1;
+}
+
+.btn-edit-group:hover {
+    color: var(--nkap-blue);
+    transform: scale(1.15);
+}
+
+.group-card-lock {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    opacity: 0.45;
+    padding: 4px 6px;
+    cursor: default;
+}
+
 .group-card-body {
     padding: 14px 18px;
     min-height: 52px;

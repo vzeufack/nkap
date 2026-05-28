@@ -53,7 +53,8 @@
                      th:if="${budget.groups != null and !budget.groups.isEmpty()}">
 
                     <div class="group-cards-list" id="groupCardsList">
-                        <div class="group-card" th:each="group : ${budget.groups}">
+                        <div class="group-card" th:each="group : ${budget.groups}"
+                             th:attr="data-group-id=${group.id},data-group-default=${group.isDefault()}">
                             <div class="group-card-header">
                                 <div class="group-card-icon">
                                     <i class="fas fa-layer-group"></i>
@@ -63,9 +64,18 @@
                                     <span class="group-card-badge" th:if="${group.isDefault()}">Default</span>
                                 </div>
                                 <div class="group-card-actions ml-auto">
-                                    <button class="btn-icon" title="More options">
-                                        <i class="fas fa-ellipsis-v"></i>
+                                    <!-- Edit button: only for non-default groups -->
+                                    <button class="btn-icon btn-edit-group"
+                                            th:if="${!group.isDefault()}"
+                                            th:attr="onclick='openEditGroupModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"
+                                            title="Rename group">
+                                        <i class="fas fa-pencil-alt"></i>
                                     </button>
+                                    <!-- Lock icon: default groups cannot be renamed -->
+                                    <span class="group-card-lock" th:if="${group.isDefault()}"
+                                          title="Default group cannot be renamed">
+                                        <i class="fas fa-lock"></i>
+                                    </span>
                                 </div>
                             </div>
                             <div class="group-card-body">
@@ -121,15 +131,17 @@
             </div>
         </div>
 
-        <!--
-            Fragment-scoped script: only openAddGroupModal() and saveGroup() live here.
-            The modal HTML itself lives in home.html (rendered once, never swapped)
-            so Bootstrap never ends up with duplicate/orphaned modals in <body>.
-        -->
         <script th:inline="javascript">
         /*<![CDATA[*/
 
+        // ── Add mode ──────────────────────────────────────────
         function openAddGroupModal() {
+            var modal = document.getElementById('addGroupModal');
+            modal.removeAttribute('data-edit-group-id');
+            document.getElementById('groupModalTitle').textContent    = 'New Group';
+            document.getElementById('groupModalDesc').textContent     = 'Give this group a name. You can organise your budget items by category — Housing, Food, Transport, etc.';
+            document.getElementById('groupModalSaveLabel').textContent = 'Save Group';
+
             var input = document.getElementById('groupNameInput');
             input.value = '';
             input.classList.remove('is-invalid');
@@ -137,6 +149,22 @@
             $('#addGroupModal').modal('show');
         }
 
+        // ── Edit mode ─────────────────────────────────────────
+        function openEditGroupModal(groupId, currentName) {
+            var modal = document.getElementById('addGroupModal');
+            modal.setAttribute('data-edit-group-id', groupId);
+            document.getElementById('groupModalTitle').textContent    = 'Rename Group';
+            document.getElementById('groupModalDesc').textContent     = 'Enter a new name for this group.';
+            document.getElementById('groupModalSaveLabel').textContent = 'Save Changes';
+
+            var input = document.getElementById('groupNameInput');
+            input.value = currentName;
+            input.classList.remove('is-invalid');
+            document.getElementById('groupNameError').textContent = '';
+            $('#addGroupModal').modal('show');
+        }
+
+        // ── Save (handles both add and edit) ──────────────────
         function saveGroup() {
             var input   = document.getElementById('groupNameInput');
             var name    = input.value.trim();
@@ -154,6 +182,15 @@
             if (!budgetContent) { console.error('No budget id found'); return; }
             var budgetId = budgetContent.getAttribute('data-budget-id');
 
+            var modal       = document.getElementById('addGroupModal');
+            var editGroupId = modal.getAttribute('data-edit-group-id');
+            var isEdit      = !!editGroupId;
+
+            var url    = isEdit
+                ? '/budgets/' + budgetId + '/groups/' + editGroupId
+                : '/budgets/' + budgetId + '/groups';
+            var method = isEdit ? 'PUT' : 'POST';
+
             var spinner = document.getElementById('btnSaveGroupSpinner');
             var icon    = document.getElementById('btnSaveGroupIcon');
             var btn     = document.getElementById('btnSaveGroup');
@@ -161,9 +198,11 @@
             icon.classList.add('d-none');
             btn.disabled = true;
 
-            fetch('/budgets/' + budgetId + '/groups', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ name: name })
             })
             .then(function(response) {
