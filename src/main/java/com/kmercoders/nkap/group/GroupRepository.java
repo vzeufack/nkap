@@ -13,4 +13,5 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     Optional<Group> findByIdAndBudgetsId(Long groupId, Long budgetId);
 
     boolean existsByBudgets_AppUserAndIsDefaultTrue(AppUser appUser);
+    boolean existsByIdAndBudgetsId(Long groupId, Long budgetId);
 }

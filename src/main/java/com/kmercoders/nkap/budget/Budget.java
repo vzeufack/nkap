@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.group.Group;
 
 @Entity
@@ -41,6 +42,9 @@ public class Budget {
     @OrderBy("isDefault DESC, name ASC")
     private Set<Group> groups = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<BudgetCategory> budgetCategories = new HashSet<>();
+
     // Constructors
     public Budget() {}
 
@@ -74,4 +78,6 @@ public class Budget {
         this.groups.remove(group);
         group.getBudgets().remove(this);
     }
+
+    public Set<BudgetCategory> getBudgetCategories() { return budgetCategories; }
 }
