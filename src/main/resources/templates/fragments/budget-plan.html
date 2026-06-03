@@ -55,6 +55,8 @@
                     <div class="group-cards-list" id="groupCardsList">
                         <div class="group-card" th:each="group : ${budget.groups}"
                              th:attr="data-group-id=${group.id},data-group-default=${group.isDefault()}">
+
+                            <!-- Card header -->
                             <div class="group-card-header">
                                 <div class="group-card-icon">
                                     <i class="fas fa-layer-group"></i>
@@ -64,23 +66,55 @@
                                     <span class="group-card-badge" th:if="${group.isDefault()}">Default</span>
                                 </div>
                                 <div class="group-card-actions ml-auto">
-                                    <!-- Edit button: only for non-default groups -->
                                     <button class="btn-icon btn-edit-group"
                                             th:if="${!group.isDefault()}"
                                             th:attr="onclick='openEditGroupModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"
                                             title="Rename group">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                    <!-- Lock icon: default groups cannot be renamed -->
                                     <span class="group-card-lock" th:if="${group.isDefault()}"
                                           title="Default group cannot be renamed">
                                         <i class="fas fa-lock"></i>
                                     </span>
                                 </div>
                             </div>
+
+                            <!-- Card body: category table -->
                             <div class="group-card-body">
-                                <p class="group-card-empty-note text-muted">No line items yet.</p>
+                                <th:block th:with="cats=${categoriesByGroup != null ? categoriesByGroup[group.id] : null}">
+                                    <th:block th:if="${cats != null and !cats.isEmpty()}">
+                                        <table class="category-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="cat-col-name">Category</th>
+                                                    <th class="cat-col-number">Allocated</th>
+                                                    <th class="cat-col-number">Balance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="bc : ${cats}" th:attr="data-category-id=${bc.category.id}">
+                                                    <td class="cat-name"      th:text="${bc.category.name}">Category</td>
+                                                    <td class="cat-allocated" th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                                                    <td class="cat-balance"
+                                                        th:classappend="${bc.category.balance < 0} ? 'negative' : ''"
+                                                        th:text="${'$' + #numbers.formatDecimal(bc.category.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </th:block>
+                                    <p class="group-card-empty-note" th:if="${cats == null or cats.isEmpty()}">No categories yet.</p>
+                                </th:block>
                             </div>
+
+                            <!-- Card footer: add category -->
+                            <div class="group-card-footer">
+                                <button class="btn-add-category"
+                                        th:attr="onclick='openAddCategoryModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"
+                                        title="Add category">
+                                    <i class="fas fa-plus mr-1"></i>Add Category
+                                </button>
+                            </div>
+
                         </div>
                     </div>
 
@@ -116,14 +150,23 @@
                             <span class="group-total ml-auto">$0.00</span>
                         </div>
                         <ul class="group-transactions">
-                            <li class="group-tx group-tx-empty">
-                                <span class="tx-name text-muted" style="font-style: italic;">No transactions yet</span>
-                            </li>
+                            <th:block th:with="cats=${categoriesByGroup != null ? categoriesByGroup[group.id] : null}">
+                                <th:block th:if="${cats != null and !cats.isEmpty()}">
+                                    <li class="group-tx" th:each="bc : ${cats}">
+                                        <span class="tx-name"   th:text="${bc.category.name}">Category</span>
+                                        <span class="tx-amount" th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                                    </li>
+                                </th:block>
+                                <li class="group-tx group-tx-empty" th:if="${cats == null or cats.isEmpty()}">
+                                    <span class="tx-name text-muted" style="font-style:italic;">No categories yet</span>
+                                </li>
+                            </th:block>
                         </ul>
                     </div>
                 </th:block>
 
-                <div class="groups-placeholder-note" th:if="${budget == null or budget.groups == null or budget.groups.isEmpty()}">
+                <div class="groups-placeholder-note"
+                     th:if="${budget == null or budget.groups == null or budget.groups.isEmpty()}">
                     <i class="fas fa-info-circle"></i>
                     <span>Groups and linked transactions will appear here based on your budget plan.</span>
                 </div>
@@ -134,12 +177,12 @@
         <script th:inline="javascript">
         /*<![CDATA[*/
 
-        // ── Add mode ──────────────────────────────────────────
+        // ── Group: Add mode ───────────────────────────────────
         function openAddGroupModal() {
             var modal = document.getElementById('addGroupModal');
             modal.removeAttribute('data-edit-group-id');
-            document.getElementById('groupModalTitle').textContent    = 'New Group';
-            document.getElementById('groupModalDesc').textContent     = 'Give this group a name. You can organise your budget items by category — Housing, Food, Transport, etc.';
+            document.getElementById('groupModalTitle').textContent     = 'New Group';
+            document.getElementById('groupModalDesc').textContent      = 'Give this group a name. You can organise your budget items by category — Housing, Food, Transport, etc.';
             document.getElementById('groupModalSaveLabel').textContent = 'Save Group';
 
             var input = document.getElementById('groupNameInput');
@@ -149,12 +192,12 @@
             $('#addGroupModal').modal('show');
         }
 
-        // ── Edit mode ─────────────────────────────────────────
+        // ── Group: Edit mode ──────────────────────────────────
         function openEditGroupModal(groupId, currentName) {
             var modal = document.getElementById('addGroupModal');
             modal.setAttribute('data-edit-group-id', groupId);
-            document.getElementById('groupModalTitle').textContent    = 'Rename Group';
-            document.getElementById('groupModalDesc').textContent     = 'Enter a new name for this group.';
+            document.getElementById('groupModalTitle').textContent     = 'Rename Group';
+            document.getElementById('groupModalDesc').textContent      = 'Enter a new name for this group.';
             document.getElementById('groupModalSaveLabel').textContent = 'Save Changes';
 
             var input = document.getElementById('groupNameInput');
@@ -164,7 +207,7 @@
             $('#addGroupModal').modal('show');
         }
 
-        // ── Save (handles both add and edit) ──────────────────
+        // ── Group: Save (add + edit) ──────────────────────────
         function saveGroup() {
             var input   = document.getElementById('groupNameInput');
             var name    = input.value.trim();
@@ -200,9 +243,7 @@
 
             fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name })
             })
             .then(function(response) {
@@ -217,6 +258,133 @@
                 console.error('Error saving group:', err);
                 input.classList.add('is-invalid');
                 errorEl.textContent = 'Something went wrong. Please try again.';
+            })
+            .finally(function() {
+                spinner.classList.add('d-none');
+                icon.classList.remove('d-none');
+                btn.disabled = false;
+            });
+        }
+
+        // ── Category: Add modal ───────────────────────────────
+        function openAddCategoryModal(groupId, groupName) {
+            var modal = document.getElementById('addCategoryModal');
+            modal.setAttribute('data-group-id', groupId);
+            document.getElementById('categoryGroupLabel').textContent = groupName;
+
+            document.getElementById('categoryNameInput').value = '';
+            document.getElementById('categoryNameInput').classList.remove('is-invalid');
+            document.getElementById('categoryNameError').textContent = '';
+
+            document.getElementById('categoryAllocationInput').value = '';
+            document.getElementById('categoryAllocationInput').classList.remove('is-invalid');
+            document.getElementById('categoryAllocationError').textContent = '';
+
+            document.getElementById('categoryBalanceInput').value = '';
+            document.getElementById('categoryBalanceInput').classList.remove('is-invalid');
+            document.getElementById('categoryBalanceError').textContent = '';
+
+            $('#addCategoryModal').modal('show');
+        }
+
+        // ── Category: Save ────────────────────────────────────
+        function saveCategory() {
+            var nameInput       = document.getElementById('categoryNameInput');
+            var allocationInput = document.getElementById('categoryAllocationInput');
+            var balanceInput    = document.getElementById('categoryBalanceInput');
+            var name            = nameInput.value.trim();
+            var allocationRaw   = allocationInput.value.trim();
+            var balanceRaw      = balanceInput.value.trim();
+
+            var nameError       = document.getElementById('categoryNameError');
+            var allocationError = document.getElementById('categoryAllocationError');
+            var balanceError    = document.getElementById('categoryBalanceError');
+
+            // Reset
+            nameInput.classList.remove('is-invalid');
+            allocationInput.classList.remove('is-invalid');
+            balanceInput.classList.remove('is-invalid');
+            nameError.textContent       = '';
+            allocationError.textContent = '';
+            balanceError.textContent    = '';
+
+            var valid = true;
+            if (!name) {
+                nameInput.classList.add('is-invalid');
+                nameError.textContent = 'Please enter a category name.';
+                valid = false;
+            }
+
+            if(name.length > 100) {
+                nameInput.classList.add('is-invalid');
+                nameError.textContent = 'Category name cannot exceed 100 characters.';
+                valid = false;
+            }
+
+            var allocation = allocationRaw === '' ? 0 : parseFloat(allocationRaw);
+            if (isNaN(allocation) || allocation < 0) {
+                allocationInput.classList.add('is-invalid');
+                allocationError.textContent = 'Please enter a valid amount (0 or more).';
+                valid = false;
+            }
+
+            // Balance is optional — default to 0 if not provided
+            var balance = balanceRaw === '' ? 0 : parseFloat(balanceRaw);
+            if (balanceRaw !== '' && isNaN(balance)) {
+                balanceInput.classList.add('is-invalid');
+                balanceError.textContent = 'Please enter a valid balance (0 or more).';
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            var budgetContent = document.querySelector('[data-budget-id]');
+            if (!budgetContent) { console.error('No budget id found'); return; }
+            var budgetId = budgetContent.getAttribute('data-budget-id');
+
+            var modal   = document.getElementById('addCategoryModal');
+            var groupId = modal.getAttribute('data-group-id');
+
+            var spinner = document.getElementById('btnSaveCategorySpinner');
+            var icon    = document.getElementById('btnSaveCategoryIcon');
+            var btn     = document.getElementById('btnSaveCategory');
+            spinner.classList.remove('d-none');
+            icon.classList.add('d-none');
+            btn.disabled = true;
+
+            fetch('/budgets/' + budgetId + '/groups/' + groupId + '/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, allocation: allocation, balance: balance })
+            })
+            .then(function(response) {
+                if (response.ok) return response.json();
+                return response.json().then(function(errs) { throw errs; });
+            })
+            .then(function() {
+                $('#addCategoryModal').modal('hide');
+                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+            })
+            .catch(function(err) {
+                // Handle validation errors returned as { field: message } map
+                if (err && typeof err === 'object' && !err.message) {
+                    if (err.name) {
+                        nameInput.classList.add('is-invalid');
+                        nameError.textContent = err.name;
+                    }
+                    if (err.allocation) {
+                        allocationInput.classList.add('is-invalid');
+                        allocationError.textContent = err.allocation;
+                    }
+                    if (err.balance) {
+                        balanceInput.classList.add('is-invalid');
+                        balanceError.textContent = err.balance;
+                    }
+                } else {
+                    nameInput.classList.add('is-invalid');
+                    nameError.textContent = 'Something went wrong. Please try again.';
+                }
+                console.error('Error saving category:', err);
             })
             .finally(function() {
                 spinner.classList.add('d-none');

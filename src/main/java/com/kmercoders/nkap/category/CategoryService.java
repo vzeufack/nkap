@@ -48,7 +48,11 @@ public class CategoryService {
         category.setBalance(initialBalance);
         categoryRepository.save(category);
 
-        BudgetCategory budgetCategory = new BudgetCategory(budget, category, request.getAllocation());
+        BigDecimal initialAllocation = request.getAllocation() != null
+            ? request.getAllocation()
+            : BigDecimal.ZERO;
+
+        BudgetCategory budgetCategory = new BudgetCategory(budget, category, initialAllocation);
         budgetCategoryRepository.save(budgetCategory);
 
         return CategoryDTO.from(budgetCategory);

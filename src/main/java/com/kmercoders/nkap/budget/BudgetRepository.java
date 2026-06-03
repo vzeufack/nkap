@@ -17,7 +17,17 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
     boolean existsByAppUserAndMonthAndYear(AppUser appUser, Month month, int year);
     long countByAppUserAndMonthAndYear(AppUser appUser, Month month, int year);
 
-    @Query("SELECT b FROM Budget b LEFT JOIN FETCH b.groups WHERE b.appUser.id = :userId AND b.month = :month AND b.year = :year")
+    @Query("""
+    SELECT b FROM Budget b
+    LEFT JOIN FETCH b.groups g
+    LEFT JOIN FETCH b.budgetCategories bc
+    LEFT JOIN FETCH bc.category c
+    LEFT JOIN FETCH c.group
+    WHERE b.appUser.id = :userId
+    AND b.month = :month
+    AND b.year = :year
+    ORDER BY c.name ASC
+    """)
     Optional<Budget> findByAppUserIdAndMonthAndYearWithGroups(
         @Param("userId") Long userId,
         @Param("month") Month month,

@@ -12,11 +12,9 @@ public class CategoryRequest {
     @Size(max = 100, message = "Category name must be 100 characters or fewer")
     private String name;
 
-    @NotNull(message = "Allocation is required")
     @DecimalMin(value = "0.00", message = "Allocation must be zero or greater")
     private BigDecimal allocation;
 
-    @DecimalMin(value = "0.00", message = "Balance must be zero or greater")
     private BigDecimal balance;
 
     public String getName()                 { return name; }

@@ -189,14 +189,14 @@ class CategoryControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void createCategory_withNullAllocation_returns400WithFieldError() throws Exception {
+    void createCategory_withNullAllocation_returns200() throws Exception {
         CategoryRequest req = request("Meat", null, null);
 
         mockMvc.perform(post(url())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.allocation", notNullValue()));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allocation", is(0)));
     }
 
     @Test
@@ -213,14 +213,14 @@ class CategoryControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void createCategory_withNegativeBalance_returns400WithFieldError() throws Exception {
+    void createCategory_withNegativeBalance_returns200() throws Exception {
         CategoryRequest req = request("Meat", new BigDecimal("100.00"), new BigDecimal("-5.00"));
 
         mockMvc.perform(post(url())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.balance", notNullValue()));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(-5.00)));
     }
 
     @Test

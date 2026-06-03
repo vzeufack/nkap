@@ -959,6 +959,124 @@ html, body {
 }
 
 /* ══════════════════════════════════════════
+   CATEGORY TABLE — inside group cards
+══════════════════════════════════════════ */
+.group-card-body {
+    padding: 0;
+    min-height: unset;
+    display: block;
+}
+
+.category-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: sans-serif;
+    font-size: 0.82rem;
+}
+
+.category-table thead tr {
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.category-table thead th {
+    padding: 7px 18px;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.category-table tbody tr {
+    border-bottom: 1px solid #f0f4f8;
+    transition: background 0.12s;
+}
+
+.category-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.category-table tbody tr:hover {
+    background: var(--nkap-blue-light);
+}
+
+.cat-col-name   { text-align: left; width: 50%; }
+.cat-col-number { text-align: right; width: 25%; }
+
+.cat-name {
+    padding: 9px 18px;
+    color: var(--text-dark);
+}
+
+.cat-allocated {
+    padding: 9px 18px;
+    text-align: right;
+    color: var(--text-dark);
+    font-family: 'Bree Serif', serif;
+}
+
+.cat-balance {
+    padding: 9px 18px;
+    text-align: right;
+    color: var(--nkap-green);
+    font-family: 'Bree Serif', serif;
+}
+
+.cat-balance.negative {
+    color: var(--nkap-red);
+}
+
+.group-card-empty-note {
+    padding: 14px 18px;
+    margin: 0;
+}
+
+/* Add Category footer button */
+.group-card-footer {
+    padding: 10px 18px;
+    border-top: 1px solid var(--panel-border);
+    background: var(--sidebar-bg);
+}
+
+.btn-add-category {
+    background: none;
+    border: none;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.8rem;
+    color: var(--nkap-blue);
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-add-category:hover {
+    color: var(--nkap-blue-dark);
+    transform: translateX(2px);
+}
+
+/* Category modal group label */
+.modal-group-label {
+    font-family: sans-serif;
+    font-size: 0.78rem;
+    display: block;
+    margin-top: 1px;
+}
+
+/* $ prefix on allocation input */
+.nkap-input-prefix {
+    background: var(--nkap-blue-light);
+    border-color: var(--panel-border);
+    color: var(--nkap-blue);
+    border-radius: 8px 0 0 8px !important;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.95rem;
+}
+
+/* ══════════════════════════════════════════
    Bootstrap datepicker overrides
 ══════════════════════════════════════════ */
 .datepicker table tr td.active,

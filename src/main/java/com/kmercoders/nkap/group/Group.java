@@ -1,12 +1,16 @@
 package com.kmercoders.nkap.group;
 
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kmercoders.nkap.budget.Budget;
+import com.kmercoders.nkap.category.Category;
 
 @Entity
 @Table(name = "budget_group")
@@ -26,6 +30,10 @@ public class Group {
     @ManyToMany(mappedBy = "groups", fetch = FetchType.LAZY)
     private Set<Budget> budgets = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    @OrderBy("name ASC")
+    private List<Category> categories = new ArrayList<>();
+
     // Constructors
     public Group() {}
 
@@ -44,4 +52,6 @@ public class Group {
 
     public Set<Budget> getBudgets() { return budgets; }
     public void setBudgets(Set<Budget> budgets) { this.budgets = budgets; }
+
+    public List<Category> getCategories() { return categories; }
 }

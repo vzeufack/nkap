@@ -2,9 +2,15 @@ package com.kmercoders.nkap.budget;
 
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
+import com.kmercoders.nkap.category.BudgetCategory;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,6 +42,19 @@ public class BudgetController {
         model.addAttribute("currentMonth", currentMonth + " " + currentYear);
         model.addAttribute("currentMonthValue", currentMonth.name());
         model.addAttribute("currentYearValue", currentYear);
+        
+        if (budget != null) {
+            Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
+                .stream()
+                .sorted(Comparator.comparing(bc -> bc.getCategory().getName()))
+                .collect(Collectors.groupingBy(
+                    bc -> bc.getCategory().getGroup().getId(),
+                    LinkedHashMap::new,
+                    Collectors.toList()
+                ));
+            model.addAttribute("categoriesByGroup", categoriesByGroup);
+        }
+        
         return "home";
     }
 
@@ -51,6 +70,18 @@ public class BudgetController {
         model.addAttribute("currentMonth", month + " " + year);
         model.addAttribute("currentMonthValue", month.name());
         model.addAttribute("currentYearValue", year);
+
+        if (budget != null) {
+            Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
+                .stream()
+                .sorted(Comparator.comparing(bc -> bc.getCategory().getName()))
+                .collect(Collectors.groupingBy(
+                    bc -> bc.getCategory().getGroup().getId(),
+                    LinkedHashMap::new,
+                    Collectors.toList()
+                ));
+            model.addAttribute("categoriesByGroup", categoriesByGroup);
+        }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
     }
