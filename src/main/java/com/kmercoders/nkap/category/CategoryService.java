@@ -64,4 +64,24 @@ public class CategoryService {
             .map(CategoryDTO::from)
             .toList();
     }
+
+    @Transactional
+    public CategoryDTO updateCategory(Long budgetId, Long groupId, Long categoryId, CategoryRequest request) {
+        BudgetCategory bc = budgetCategoryRepository
+            .findByBudgetIdAndCategoryIdAndCategoryGroupId(budgetId, categoryId, groupId)
+            .orElseThrow(() -> new IllegalArgumentException("Category not found in this group."));
+
+        bc.getCategory().setName(request.getName());
+
+        BigDecimal updatedAllocation = request.getAllocation() != null
+            ? request.getAllocation()
+            : bc.getAllocation();
+        bc.setAllocation(updatedAllocation);
+
+        if (request.getBalance() != null) {
+            bc.getCategory().setBalance(request.getBalance());
+        }
+
+        return CategoryDTO.from(bc);
+    }
 }

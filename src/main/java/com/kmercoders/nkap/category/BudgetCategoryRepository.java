@@ -20,4 +20,7 @@ public interface BudgetCategoryRepository
     List<BudgetCategory> findByBudgetId(@Param("budgetId") Long budgetId);
 
     Optional<BudgetCategory> findByBudgetIdAndCategoryId(Long budgetId, Long categoryId);
+
+    Optional<BudgetCategory> findByBudgetIdAndCategoryIdAndCategoryGroupId(
+        Long budgetId, Long categoryId, Long groupId);
 }

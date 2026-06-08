@@ -7,6 +7,7 @@ import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.budget.BudgetService;
 import com.kmercoders.nkap.group.Group;
+import com.kmercoders.nkap.group.GroupDTO;
 import com.kmercoders.nkap.group.GroupRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import java.math.BigDecimal;
 import java.time.Month;
@@ -84,6 +86,10 @@ class CategoryControllerTest {
 
     private String url() {
         return "/budgets/%d/groups/%d/categories".formatted(budget.getId(), group.getId());
+    }
+
+    private String url(Long categoryId) {
+        return "/budgets/%d/groups/%d/categories/%d".formatted(budget.getId(), group.getId(), categoryId);
     }
 
     private CategoryRequest request(String name, BigDecimal allocation, BigDecimal balance) {
@@ -285,6 +291,225 @@ class CategoryControllerTest {
         mockMvc.perform(post(url())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
+
+    // ── Update: Happy path ─────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withAllFields_returns200AndCorrectPayload() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("Fish", new BigDecimal("200.00"), new BigDecimal("75.00"));
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id",         is(categoryId.intValue())))
+                .andExpect(jsonPath("$.name",        is("Fish")))
+                .andExpect(jsonPath("$.allocation",  is(200.00)))
+                .andExpect(jsonPath("$.balance",     is(75.00)))
+                .andExpect(jsonPath("$.groupId",     is(group.getId().intValue())));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_persistsChangesToDatabase() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("Fish", new BigDecimal("200.00"), new BigDecimal("75.00"));
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk());
+
+        Category updated = categoryRepository.findById(categoryId).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("Fish");
+        assertThat(updated.getBalance()).isEqualByComparingTo("75.00");
+
+        List<BudgetCategory> budgetCategories = budgetCategoryRepository.findByBudgetId(budget.getId());
+        assertThat(budgetCategories).hasSize(1);
+        assertThat(budgetCategories.get(0).getAllocation()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNullBalance_doesNotChangeExistingBalance() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("200.00"), null);
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(50.00)));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNullAllocation_doesNotChangeExistingAllocation() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("Meat", null, null);
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allocation", is(150.00)));
+    }
+
+    // ── Update: Validation failures ────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withBlankName_returns400WithFieldError() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("", new BigDecimal("150.00"), null);
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNegativeAllocation_returns400WithFieldError() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("-10.00"), null);
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.allocation", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNameExceedingMaxLength_returns400WithFieldError() throws Exception {
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        CategoryRequest updateReq = request("A".repeat(101), new BigDecimal("150.00"), null);
+
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", notNullValue()));
+    }
+
+    // ── Update: Domain failures ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withUnknownCategoryId_returns400() throws Exception {
+        CategoryRequest updateReq = request("Fish", new BigDecimal("200.00"), null);
+
+        mockMvc.perform(put(url(999L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withCategoryNotBelongingToGroup_returns400() throws Exception {
+        mockMvc.perform(post("/budgets/%d/groups".formatted(budget.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupDTO("Other"))))
+                .andExpect(status().isOk());
+
+        Group otherGroup = groupRepository.findByBudgetsId(budget.getId()).stream()
+                .filter(g -> "Other".equals(g.getName()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Other group not found"));
+
+        // Create a category under otherGroup
+        CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
+        String response = mockMvc.perform(post("/budgets/%d/groups/%d/categories"
+                                .formatted(budget.getId(), otherGroup.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long categoryId = objectMapper.readTree(response).get("id").asLong();
+
+        // Try to update it via group (wrong group for this category)
+        CategoryRequest updateReq = request("Fish", new BigDecimal("200.00"), null);
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ── Update: Security ───────────────────────────────────────────────────────
+
+    @Test
+    void updateCategory_withoutAuthentication_returns401or302() throws Exception {
+        CategoryRequest updateReq = request("Fish", new BigDecimal("200.00"), null);
+
+        mockMvc.perform(put(url(1L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().is(anyOf(is(401), is(302))));
     }
 }
