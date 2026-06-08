@@ -1033,6 +1033,34 @@ html, body {
     margin: 0;
 }
 
+/* Category row edit button */
+.cat-col-action {
+    width: 32px;
+    text-align: center;
+}
+
+.cat-action {
+    padding: 0 8px;
+    text-align: center;
+}
+
+.btn-edit-category {
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 3px 5px;
+}
+
+.cat-row:hover .btn-edit-category {
+    opacity: 1;
+}
+
+.btn-edit-category:hover {
+    color: var(--nkap-blue);
+    transform: scale(1.15);
+}
+
 /* Add Category footer button */
 .group-card-footer {
     padding: 10px 18px;

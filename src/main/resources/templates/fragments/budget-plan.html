@@ -89,20 +89,34 @@
                                                     <th class="cat-col-name">Category</th>
                                                     <th class="cat-col-number">Allocated</th>
                                                     <th class="cat-col-number">Balance</th>
+                                                    <th class="cat-col-action"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr th:each="bc : ${cats}" th:attr="data-category-id=${bc.category.id}">
-                                                    <td class="cat-name"      th:text="${bc.category.name}">Category</td>
-                                                    <td class="cat-allocated" th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                                                <tr th:each="bc : ${cats}"
+                                                    th:attr="data-category-id=${bc.category.id}"
+                                                    class="cat-row">
+                                                    <td class="cat-name" th:text="${bc.category.name}">Category</td>
+                                                    <td class="cat-allocated"
+                                                        th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
                                                     <td class="cat-balance"
                                                         th:classappend="${bc.category.balance < 0} ? 'negative' : ''"
                                                         th:text="${'$' + #numbers.formatDecimal(bc.category.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                                                    <td class="cat-action">
+                                                        <button class="btn-icon btn-edit-category"
+                                                                th:attr="onclick='openEditCategoryModal(' + ${bc.category.id} + ', \'' + ${group.id} + '\', \'' + ${group.name} + '\', \'' + ${bc.category.name} + '\', ' + ${bc.allocation} + ', ' + ${bc.category.balance} + ')'"
+                                                                title="Edit category">
+                                                            <i class="fas fa-pencil-alt"></i>
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </th:block>
-                                    <p class="group-card-empty-note" th:if="${cats == null or cats.isEmpty()}">No categories yet.</p>
+                                    <p class="group-card-empty-note"
+                                       th:if="${cats == null or cats.isEmpty()}">
+                                        No categories yet.
+                                    </p>
                                 </th:block>
                             </div>
 
@@ -157,8 +171,9 @@
                                         <span class="tx-amount" th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
                                     </li>
                                 </th:block>
-                                <li class="group-tx group-tx-empty" th:if="${cats == null or cats.isEmpty()}">
-                                    <span class="tx-name text-muted" style="font-style:italic;">No categories yet</span>
+                                <li class="group-tx group-tx-empty"
+                                    th:if="${cats == null or cats.isEmpty()}">
+                                    <span class="tx-name text-muted" style="font-style: italic;">No categories yet</span>
                                 </li>
                             </th:block>
                         </ul>
@@ -266,28 +281,50 @@
             });
         }
 
-        // ── Category: Add modal ───────────────────────────────
+        // ── Category: Add mode ────────────────────────────────
         function openAddCategoryModal(groupId, groupName) {
             var modal = document.getElementById('addCategoryModal');
+            modal.removeAttribute('data-edit-category-id');
             modal.setAttribute('data-group-id', groupId);
-            document.getElementById('categoryGroupLabel').textContent = groupName;
 
-            document.getElementById('categoryNameInput').value = '';
-            document.getElementById('categoryNameInput').classList.remove('is-invalid');
-            document.getElementById('categoryNameError').textContent = '';
+            document.getElementById('categoryModalTitle').textContent     = 'New Category';
+            document.getElementById('categoryModalSaveLabel').textContent = 'Save Category';
+            document.getElementById('categoryGroupLabel').textContent     = groupName;
 
-            document.getElementById('categoryAllocationInput').value = '';
-            document.getElementById('categoryAllocationInput').classList.remove('is-invalid');
-            document.getElementById('categoryAllocationError').textContent = '';
+            resetCategoryForm();
+            $('#addCategoryModal').modal('show');
+        }
 
-            document.getElementById('categoryBalanceInput').value = '';
-            document.getElementById('categoryBalanceInput').classList.remove('is-invalid');
-            document.getElementById('categoryBalanceError').textContent = '';
+        // ── Category: Edit mode ───────────────────────────────
+        function openEditCategoryModal(categoryId, groupId, groupName, name, allocation, balance) {
+            var modal = document.getElementById('addCategoryModal');
+            modal.setAttribute('data-edit-category-id', categoryId);
+            modal.setAttribute('data-group-id', groupId);
+
+            document.getElementById('categoryModalTitle').textContent     = 'Edit Category';
+            document.getElementById('categoryModalSaveLabel').textContent = 'Save Changes';
+            document.getElementById('categoryGroupLabel').textContent     = groupName;
+
+            resetCategoryForm();
+            document.getElementById('categoryNameInput').value       = name;
+            document.getElementById('categoryAllocationInput').value = allocation;
+            document.getElementById('categoryBalanceInput').value    = balance;
 
             $('#addCategoryModal').modal('show');
         }
 
-        // ── Category: Save ────────────────────────────────────
+        function resetCategoryForm() {
+            ['categoryNameInput', 'categoryAllocationInput', 'categoryBalanceInput'].forEach(function(id) {
+                var el = document.getElementById(id);
+                el.value = '';
+                el.classList.remove('is-invalid');
+            });
+            ['categoryNameError', 'categoryAllocationError', 'categoryBalanceError'].forEach(function(id) {
+                document.getElementById(id).textContent = '';
+            });
+        }
+
+        // ── Category: Save (add + edit) ───────────────────────
         function saveCategory() {
             var nameInput       = document.getElementById('categoryNameInput');
             var allocationInput = document.getElementById('categoryAllocationInput');
@@ -300,7 +337,7 @@
             var allocationError = document.getElementById('categoryAllocationError');
             var balanceError    = document.getElementById('categoryBalanceError');
 
-            // Reset
+            // Reset validation state
             nameInput.classList.remove('is-invalid');
             allocationInput.classList.remove('is-invalid');
             balanceInput.classList.remove('is-invalid');
@@ -315,24 +352,18 @@
                 valid = false;
             }
 
-            if(name.length > 100) {
-                nameInput.classList.add('is-invalid');
-                nameError.textContent = 'Category name cannot exceed 100 characters.';
-                valid = false;
-            }
-
             var allocation = allocationRaw === '' ? 0 : parseFloat(allocationRaw);
-            if (isNaN(allocation) || allocation < 0) {
+            if (allocationRaw !== '' && (isNaN(allocation) || allocation < 0)) {
                 allocationInput.classList.add('is-invalid');
                 allocationError.textContent = 'Please enter a valid amount (0 or more).';
                 valid = false;
             }
 
-            // Balance is optional — default to 0 if not provided
-            var balance = balanceRaw === '' ? 0 : parseFloat(balanceRaw);
-            if (balanceRaw !== '' && isNaN(balance)) {
+            // Balance is optional — null means "keep existing" on edit, 0 on create
+            var balance = balanceRaw === '' ? null : parseFloat(balanceRaw);
+            if (balance !== null && isNaN(balance)) {
                 balanceInput.classList.add('is-invalid');
-                balanceError.textContent = 'Please enter a valid balance (0 or more).';
+                balanceError.textContent = 'Please enter a valid balance.';
                 valid = false;
             }
 
@@ -342,8 +373,15 @@
             if (!budgetContent) { console.error('No budget id found'); return; }
             var budgetId = budgetContent.getAttribute('data-budget-id');
 
-            var modal   = document.getElementById('addCategoryModal');
-            var groupId = modal.getAttribute('data-group-id');
+            var modal          = document.getElementById('addCategoryModal');
+            var groupId        = modal.getAttribute('data-group-id');
+            var editCategoryId = modal.getAttribute('data-edit-category-id');
+            var isEdit         = !!editCategoryId;
+
+            var url    = isEdit
+                ? '/budgets/' + budgetId + '/groups/' + groupId + '/categories/' + editCategoryId
+                : '/budgets/' + budgetId + '/groups/' + groupId + '/categories';
+            var method = isEdit ? 'PUT' : 'POST';
 
             var spinner = document.getElementById('btnSaveCategorySpinner');
             var icon    = document.getElementById('btnSaveCategoryIcon');
@@ -352,10 +390,13 @@
             icon.classList.add('d-none');
             btn.disabled = true;
 
-            fetch('/budgets/' + budgetId + '/groups/' + groupId + '/categories', {
-                method: 'POST',
+            var payload = { name: name, allocation: allocation };
+            if (balance !== null) payload.balance = balance;
+
+            fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name, allocation: allocation, balance: balance })
+                body: JSON.stringify(payload)
             })
             .then(function(response) {
                 if (response.ok) return response.json();
@@ -366,7 +407,6 @@
                 document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
             })
             .catch(function(err) {
-                // Handle validation errors returned as { field: message } map
                 if (err && typeof err === 'object' && !err.message) {
                     if (err.name) {
                         nameInput.classList.add('is-invalid');
