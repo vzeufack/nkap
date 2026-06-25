@@ -9,6 +9,7 @@ import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.kmercoders.nkap.account.Account;
 import com.kmercoders.nkap.budget.Budget;
 
 import jakarta.persistence.CascadeType;
@@ -38,6 +39,9 @@ public class AppUser implements UserDetails{
 
 	@OneToMany(mappedBy = "appUser", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Budget> budgets = new ArrayList<>();
+
+	@OneToMany(mappedBy = "appUser", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Account> accounts = new ArrayList<>();
 
 	public AppUser() {
 	}

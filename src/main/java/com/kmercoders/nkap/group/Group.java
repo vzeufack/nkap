@@ -30,7 +30,7 @@ public class Group {
     @ManyToMany(mappedBy = "groups", fetch = FetchType.LAZY)
     private Set<Budget> budgets = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("name ASC")
     private List<Category> categories = new ArrayList<>();
 
