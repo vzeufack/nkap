@@ -88,45 +88,35 @@
             <div class="sidebar-section sidebar-accounts-section flex-grow-1">
                 <div class="sidebar-section-header">
                     <span>Accounts</span>
-                    <button class="btn-icon" title="Add account"><i class="fas fa-plus-circle"></i></button>
+                    <button class="btn-icon" title="Add account" onclick="openAddAccountModal()"><i class="fas fa-plus-circle"></i></button>
                 </div>
 
                 <div class="account-list">
                     <div class="account-item" th:each="account : ${accounts}">
-                        <div class="account-icon"><i class="fas fa-university"></i></div>
+                        <div class="account-icon"
+                             th:classappend="${account.accountType.name() == 'SAVINGS'} ? 'savings-icon' : (${account.accountType.name() == 'CREDIT'} ? 'credit-icon' : '')">
+                            <i th:class="${account.accountType.name() == 'SAVINGS'} ? 'fas fa-piggy-bank'
+                                       : (${account.accountType.name() == 'CREDIT'}  ? 'fas fa-credit-card'
+                                       : (${account.accountType.name() == 'CASH'}    ? 'fas fa-money-bill-wave'
+                                       : 'fas fa-university'))"></i>
+                        </div>
                         <div class="account-info">
                             <span class="account-name" th:text="${account.name}">Checking</span>
                             <span class="account-balance"
-                                  th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 2)}">$0.00</span>
+                                  th:classappend="${account.balance < 0} ? 'negative' : ''"
+                                  th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
                         </div>
                     </div>
-                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
-                        <div class="account-icon"><i class="fas fa-university"></i></div>
-                        <div class="account-info">
-                            <span class="account-name">Checking</span>
-                            <span class="account-balance">$2,400.00</span>
-                        </div>
-                    </div>
-                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
-                        <div class="account-icon savings-icon"><i class="fas fa-piggy-bank"></i></div>
-                        <div class="account-info">
-                            <span class="account-name">Savings</span>
-                            <span class="account-balance">$8,150.00</span>
-                        </div>
-                    </div>
-                    <div class="account-item" th:if="${#lists.isEmpty(accounts)}">
-                        <div class="account-icon credit-icon"><i class="fas fa-credit-card"></i></div>
-                        <div class="account-info">
-                            <span class="account-name">Credit Card</span>
-                            <span class="account-balance negative">-$320.00</span>
-                        </div>
+                    <div th:if="${accounts == null or accounts.isEmpty()}" class="px-3 py-2"
+                         style="font-size:0.82rem; color: var(--text-muted); font-style: italic;">
+                        No accounts yet. Add one with <i class="fas fa-plus-circle"></i>.
                     </div>
                 </div>
 
                 <div class="accounts-total">
                     <span class="total-label">Net Worth</span>
                     <span class="total-amount bree-serif"
-                          th:text="${'$' + #numbers.formatDecimal(netWorth ?: 10230, 1, 2)}">$10,230.00</span>
+                          th:text="${'$' + #numbers.formatDecimal(netWorth ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
                 </div>
             </div>
 
@@ -253,6 +243,63 @@
     </div>
 </div>
 
+<!-- ══ Add Account Modal ══ -->
+<div class="modal fade" id="addAccountModal" tabindex="-1" role="dialog"
+     aria-labelledby="accountModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="accountModalTitle">New Account</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="accountNameInput">Account Name</label>
+                    <input type="text" id="accountNameInput" class="form-control nkap-input"
+                           placeholder="e.g. Checking, Savings, Wallet…" maxlength="100" autocomplete="off"/>
+                    <div class="invalid-feedback" id="accountNameError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="accountTypeSelect">Account Type</label>
+                    <select id="accountTypeSelect" class="form-control nkap-input">
+                        <option value="CHECKING">Checking</option>
+                        <option value="SAVINGS">Savings</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CREDIT">Credit</option>
+                    </select>
+                    <div class="invalid-feedback" id="accountTypeError"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="nkap-input-label" for="accountBalanceInput">Opening Balance</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text nkap-input-prefix">$</span>
+                        </div>
+                        <input type="number" id="accountBalanceInput" class="form-control nkap-input"
+                               placeholder="0.00" step="0.01" autocomplete="off"/>
+                    </div>
+                    <div class="invalid-feedback d-block" id="accountBalanceError"></div>
+                </div>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-save" id="btnSaveAccount" onclick="saveAccount()">
+                    <span id="btnSaveAccountSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnSaveAccountIcon"></i>
+                    Save Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal event bindings — once here, never re-registered on fragment swaps -->
 <script>
     $('#addGroupModal').on('shown.bs.modal', function() {
@@ -263,6 +310,10 @@
         document.getElementById('categoryNameInput').focus();
     });
 
+    $('#addAccountModal').on('shown.bs.modal', function() {
+        document.getElementById('accountNameInput').focus();
+    });
+
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Enter') return;
         var active = document.activeElement;
@@ -271,7 +322,95 @@
         if (active.id === 'categoryNameInput'    ||
             active.id === 'categoryAllocationInput' ||
             active.id === 'categoryBalanceInput')    saveCategory();
+        if (active.id === 'accountNameInput'     ||
+            active.id === 'accountBalanceInput')     saveAccount();
     });
+
+    function openAddAccountModal() {
+        document.getElementById('accountNameInput').value = '';
+        document.getElementById('accountTypeSelect').value = 'CHECKING';
+        document.getElementById('accountBalanceInput').value = '';
+        ['accountNameInput', 'accountTypeSelect', 'accountBalanceInput'].forEach(function(id) {
+            document.getElementById(id).classList.remove('is-invalid');
+        });
+        ['accountNameError', 'accountTypeError', 'accountBalanceError'].forEach(function(id) {
+            document.getElementById(id).textContent = '';
+        });
+        $('#addAccountModal').modal('show');
+    }
+
+    function saveAccount() {
+        var nameInput    = document.getElementById('accountNameInput');
+        var typeSelect   = document.getElementById('accountTypeSelect');
+        var balanceInput = document.getElementById('accountBalanceInput');
+        var nameError    = document.getElementById('accountNameError');
+        var balanceError = document.getElementById('accountBalanceError');
+
+        nameInput.classList.remove('is-invalid');
+        balanceInput.classList.remove('is-invalid');
+        nameError.textContent    = '';
+        balanceError.textContent = '';
+
+        var name       = nameInput.value.trim();
+        var type       = typeSelect.value;
+        var balanceRaw = balanceInput.value.trim();
+        var balance    = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
+
+        var valid = true;
+        if (!name) {
+            nameInput.classList.add('is-invalid');
+            nameError.textContent = 'Please enter an account name.';
+            valid = false;
+        }
+        if (balanceRaw !== '' && Number.isNaN(balance)) {
+            balanceInput.classList.add('is-invalid');
+            balanceError.textContent = 'Please enter a valid balance.';
+            valid = false;
+        }
+        if (!valid) return;
+
+        var spinner = document.getElementById('btnSaveAccountSpinner');
+        var icon    = document.getElementById('btnSaveAccountIcon');
+        var btn     = document.getElementById('btnSaveAccount');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        fetch('/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, accountType: type, balance: balance })
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function() {
+            $('#addAccountModal').modal('hide');
+            globalThis.location.reload();
+        })
+        .catch(function(err) {
+            if (err && typeof err === 'object' && !err.message) {
+                if (err.name) {
+                    nameInput.classList.add('is-invalid');
+                    nameError.textContent = err.name;
+                }
+                if (err.balance) {
+                    balanceInput.classList.add('is-invalid');
+                    balanceError.textContent = err.balance;
+                }
+            } else {
+                nameInput.classList.add('is-invalid');
+                nameError.textContent = 'Something went wrong. Please try again.';
+            }
+            console.error('Error saving account:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
 </script>
 
 </body>

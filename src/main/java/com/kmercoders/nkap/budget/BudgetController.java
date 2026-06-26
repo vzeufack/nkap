@@ -1,9 +1,12 @@
 package com.kmercoders.nkap.budget;
 
+import com.kmercoders.nkap.account.AccountDTO;
+import com.kmercoders.nkap.account.AccountService;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.Comparator;
@@ -23,10 +26,12 @@ public class BudgetController {
 
     private final BudgetService budgetService;
     private final AppUserService appUserService;
+    private final AccountService accountService;
 
-    public BudgetController(BudgetService budgetService, AppUserService appUserService) {
+    public BudgetController(BudgetService budgetService, AppUserService appUserService, AccountService accountService) {
         this.budgetService = budgetService;
         this.appUserService = appUserService;
+        this.accountService = accountService;
     }
 
     @GetMapping("/")
@@ -42,7 +47,8 @@ public class BudgetController {
         model.addAttribute("currentMonth", currentMonth + " " + currentYear);
         model.addAttribute("currentMonthValue", currentMonth.name());
         model.addAttribute("currentYearValue", currentYear);
-        
+        addAccountAttributes(model);
+
         if (budget != null) {
             Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
                 .stream()
@@ -54,7 +60,7 @@ public class BudgetController {
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
         }
-        
+
         return "home";
     }
 
@@ -71,6 +77,10 @@ public class BudgetController {
         model.addAttribute("currentMonthValue", month.name());
         model.addAttribute("currentYearValue", year);
 
+        if (htmxRequest == null) {
+            addAccountAttributes(model);
+        }
+
         if (budget != null) {
             Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
                 .stream()
@@ -84,6 +94,15 @@ public class BudgetController {
         }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
+    }
+
+    private void addAccountAttributes(Model model) {
+        List<AccountDTO> accounts = accountService.getAccountsForCurrentUser();
+        BigDecimal netWorth = accounts.stream()
+            .map(AccountDTO::getBalance)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        model.addAttribute("accounts", accounts);
+        model.addAttribute("netWorth", netWorth);
     }
 
     @PostMapping("/create/{month}/{year}")
