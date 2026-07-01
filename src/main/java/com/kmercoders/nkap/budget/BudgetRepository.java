@@ -26,7 +26,7 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
     WHERE b.appUser.id = :userId
     AND b.month = :month
     AND b.year = :year
-    ORDER BY c.name ASC
+    ORDER BY LOWER(c.name) ASC
     """)
     Optional<Budget> findByAppUserIdAndMonthAndYearWithGroups(
         @Param("userId") Long userId,

@@ -52,7 +52,7 @@ public class BudgetController {
         if (budget != null) {
             Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
                 .stream()
-                .sorted(Comparator.comparing(bc -> bc.getCategory().getName()))
+                .sorted(Comparator.comparing(bc -> bc.getCategory().getName(), String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.groupingBy(
                     bc -> bc.getCategory().getGroup().getId(),
                     LinkedHashMap::new,
@@ -84,7 +84,7 @@ public class BudgetController {
         if (budget != null) {
             Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
                 .stream()
-                .sorted(Comparator.comparing(bc -> bc.getCategory().getName()))
+                .sorted(Comparator.comparing(bc -> bc.getCategory().getName(), String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.groupingBy(
                     bc -> bc.getCategory().getGroup().getId(),
                     LinkedHashMap::new,

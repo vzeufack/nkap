@@ -39,7 +39,7 @@ public class Budget {
         joinColumns = @JoinColumn(name = "budget_id"),
         inverseJoinColumns = @JoinColumn(name = "group_id")
     )
-    @OrderBy("isDefault DESC, name ASC")
+    @OrderBy("isDefault DESC, LOWER(name) ASC")
     private Set<Group> groups = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
