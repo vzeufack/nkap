@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserRepository;
 
-import org.springframework.transaction.annotation.Transactional;
-
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -22,6 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -241,6 +240,141 @@ class AccountControllerTest {
     @Test
     void getAccounts_withoutAuthentication_returns401or302() throws Exception {
         mockMvc.perform(get(URL))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
+
+    // ── Update: Happy path ─────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withValidFields_returns200AndUpdatedPayload() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Old Name", new BigDecimal("100.00"), user));
+
+        AccountRequest req = request("New Name", AccountType.SAVINGS, new BigDecimal("999.00"));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andDo(print())
+                .andExpect(jsonPath("$.id",         is(saved.getId().intValue())))
+                .andExpect(jsonPath("$.name",        is("New Name")))
+                .andExpect(jsonPath("$.accountType", is("SAVINGS")))
+                .andExpect(jsonPath("$.balance",     is(999.00)));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_persistsChangesToDatabase() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Old Name", new BigDecimal("100.00"), user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Updated Name", AccountType.CASH, new BigDecimal("250.00")))))
+                .andExpect(status().isOk());
+
+        Account updated = accountRepository.findById(saved.getId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("Updated Name");
+        assertThat(updated.getType()).isEqualTo(AccountType.CASH);
+        assertThat(updated.getBalance()).isEqualByComparingTo("250.00");
+    }
+
+    // ── Update: Access isolation ───────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withNonExistentId_returns404() throws Exception {
+        mockMvc.perform(put(URL + "/999999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Name", AccountType.CHECKING, BigDecimal.ZERO))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_cannotUpdateAnotherUsersAccount_returns404() throws Exception {
+        AppUser otherUser = new AppUser("other_edit@example.com", passwordEncoder.encode("pass"));
+        appUserRepository.save(otherUser);
+        Account otherAccount = accountRepository.save(
+                new Account(AccountType.CHECKING, "Other Account", BigDecimal.ZERO, otherUser));
+
+        mockMvc.perform(put(URL + "/" + otherAccount.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Hijacked", AccountType.SAVINGS, new BigDecimal("9999.00")))))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── Update: Validation failures ────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withBlankName_returns400WithFieldError() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Valid", BigDecimal.ZERO, user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("", AccountType.CHECKING, BigDecimal.ZERO))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withNameExceedingMaxLength_returns400WithFieldError() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Valid", BigDecimal.ZERO, user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("A".repeat(101), AccountType.CHECKING, BigDecimal.ZERO))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.name", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withNullAccountType_returns400WithFieldError() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Valid", BigDecimal.ZERO, user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Name", null, BigDecimal.ZERO))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.accountType", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withNullBalance_returns400WithFieldError() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Valid", BigDecimal.ZERO, user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Name", AccountType.CHECKING, null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.balance", notNullValue()));
+    }
+
+    // ── Update: Security ───────────────────────────────────────────────────────
+
+    @Test
+    void updateAccount_withoutAuthentication_returns401or302() throws Exception {
+        mockMvc.perform(put(URL + "/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Name", AccountType.CHECKING, BigDecimal.ZERO))))
                 .andExpect(status().is(anyOf(is(401), is(302))));
     }
 }

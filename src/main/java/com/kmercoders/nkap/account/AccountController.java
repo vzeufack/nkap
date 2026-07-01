@@ -39,4 +39,21 @@ public class AccountController {
 
         return ResponseEntity.ok(accountService.createAccount(request));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAccount(@PathVariable("id") Long id,
+                                           @Valid @RequestBody AccountRequest request,
+                                           BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                    fe -> fe.getField(),
+                    fe -> fe.getDefaultMessage(),
+                    (first, second) -> first
+                ));
+            return ResponseEntity.badRequest().body(errors);
+        }
+
+        return ResponseEntity.ok(accountService.updateAccount(id, request));
+    }
 }
