@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -25,6 +26,7 @@ public class AccountService {
         AppUser appUser = appUserService.getAuthenticatedUser();
         return accountRepository.findByAppUser(appUser).stream()
             .map(AccountDTO::from)
+            .sorted(Comparator.comparing(dto -> dto.getName().toLowerCase()))
             .toList();
     }
 

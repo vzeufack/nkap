@@ -106,6 +106,11 @@
                                   th:classappend="${account.balance < 0} ? 'negative' : ''"
                                   th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
                         </div>
+                        <button class="btn-icon account-edit-btn" title="Edit account"
+                                th:attr="data-id=${account.id},data-name=${account.name},data-type=${account.accountType.name()},data-balance=${account.balance}"
+                                onclick="openEditAccountModal(this)">
+                            <i class="fas fa-pen"></i>
+                        </button>
                     </div>
                     <div th:if="${accounts == null or accounts.isEmpty()}" class="px-3 py-2"
                          style="font-size:0.82rem; color: var(--text-muted); font-style: italic;">
@@ -300,6 +305,64 @@
     </div>
 </div>
 
+<!-- ══ Edit Account Modal ══ -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" role="dialog"
+     aria-labelledby="editAccountModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="editAccountModalTitle">Edit Account</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <input type="hidden" id="editAccountId"/>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editAccountNameInput">Account Name</label>
+                    <input type="text" id="editAccountNameInput" class="form-control nkap-input"
+                           placeholder="e.g. Checking, Savings, Wallet…" maxlength="100" autocomplete="off"/>
+                    <div class="invalid-feedback" id="editAccountNameError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editAccountTypeSelect">Account Type</label>
+                    <select id="editAccountTypeSelect" class="form-control nkap-input">
+                        <option value="CHECKING">Checking</option>
+                        <option value="SAVINGS">Savings</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CREDIT">Credit</option>
+                    </select>
+                    <div class="invalid-feedback" id="editAccountTypeError"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="nkap-input-label" for="editAccountBalanceInput">Balance</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text nkap-input-prefix">$</span>
+                        </div>
+                        <input type="number" id="editAccountBalanceInput" class="form-control nkap-input"
+                               placeholder="0.00" step="0.01" autocomplete="off"/>
+                    </div>
+                    <div class="invalid-feedback d-block" id="editAccountBalanceError"></div>
+                </div>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-save" id="btnUpdateAccount" onclick="updateAccount()">
+                    <span id="btnUpdateAccountSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnUpdateAccountIcon"></i>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal event bindings — once here, never re-registered on fragment swaps -->
 <script>
     $('#addGroupModal').on('shown.bs.modal', function() {
@@ -314,6 +377,10 @@
         document.getElementById('accountNameInput').focus();
     });
 
+    $('#editAccountModal').on('shown.bs.modal', function() {
+        document.getElementById('editAccountNameInput').focus();
+    });
+
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Enter') return;
         var active = document.activeElement;
@@ -324,7 +391,97 @@
             active.id === 'categoryBalanceInput')    saveCategory();
         if (active.id === 'accountNameInput'     ||
             active.id === 'accountBalanceInput')     saveAccount();
+        if (active.id === 'editAccountNameInput' ||
+            active.id === 'editAccountBalanceInput') updateAccount();
     });
+
+    function openEditAccountModal(btn) {
+        document.getElementById('editAccountId').value             = btn.dataset.id;
+        document.getElementById('editAccountNameInput').value      = btn.dataset.name;
+        document.getElementById('editAccountTypeSelect').value     = btn.dataset.type;
+        document.getElementById('editAccountBalanceInput').value   = btn.dataset.balance;
+        ['editAccountNameInput', 'editAccountTypeSelect', 'editAccountBalanceInput'].forEach(function(id) {
+            document.getElementById(id).classList.remove('is-invalid');
+        });
+        ['editAccountNameError', 'editAccountTypeError', 'editAccountBalanceError'].forEach(function(id) {
+            document.getElementById(id).textContent = '';
+        });
+        $('#editAccountModal').modal('show');
+    }
+
+    function updateAccount() {
+        var nameInput    = document.getElementById('editAccountNameInput');
+        var typeSelect   = document.getElementById('editAccountTypeSelect');
+        var balanceInput = document.getElementById('editAccountBalanceInput');
+        var nameError    = document.getElementById('editAccountNameError');
+        var balanceError = document.getElementById('editAccountBalanceError');
+
+        nameInput.classList.remove('is-invalid');
+        balanceInput.classList.remove('is-invalid');
+        nameError.textContent    = '';
+        balanceError.textContent = '';
+
+        var name       = nameInput.value.trim();
+        var type       = typeSelect.value;
+        var balanceRaw = balanceInput.value.trim();
+        var balance    = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
+
+        var valid = true;
+        if (!name) {
+            nameInput.classList.add('is-invalid');
+            nameError.textContent = 'Please enter an account name.';
+            valid = false;
+        }
+        if (balanceRaw !== '' && Number.isNaN(balance)) {
+            balanceInput.classList.add('is-invalid');
+            balanceError.textContent = 'Please enter a valid balance.';
+            valid = false;
+        }
+        if (!valid) return;
+
+        var spinner = document.getElementById('btnUpdateAccountSpinner');
+        var icon    = document.getElementById('btnUpdateAccountIcon');
+        var btn     = document.getElementById('btnUpdateAccount');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        var id = document.getElementById('editAccountId').value;
+        fetch('/accounts/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, accountType: type, balance: balance })
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function() {
+            $('#editAccountModal').modal('hide');
+            globalThis.location.reload();
+        })
+        .catch(function(err) {
+            if (err && typeof err === 'object' && !err.message) {
+                if (err.name) {
+                    nameInput.classList.add('is-invalid');
+                    nameError.textContent = err.name;
+                }
+                if (err.balance) {
+                    balanceInput.classList.add('is-invalid');
+                    balanceError.textContent = err.balance;
+                }
+            } else {
+                nameInput.classList.add('is-invalid');
+                nameError.textContent = 'Something went wrong. Please try again.';
+            }
+            console.error('Error updating account:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
 
     function openAddAccountModal() {
         document.getElementById('accountNameInput').value = '';

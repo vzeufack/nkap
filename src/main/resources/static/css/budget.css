@@ -363,6 +363,17 @@ html, body {
     color: var(--nkap-red);
 }
 
+.account-edit-btn {
+    opacity: 0;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
+
+.account-item:hover .account-edit-btn {
+    opacity: 1;
+}
+
 .accounts-total {
     display: flex;
     justify-content: space-between;
