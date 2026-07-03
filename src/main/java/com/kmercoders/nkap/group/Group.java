@@ -2,6 +2,7 @@ package com.kmercoders.nkap.group;
 
 import jakarta.persistence.*;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -14,7 +15,7 @@ import com.kmercoders.nkap.category.Category;
 
 @Entity
 @Table(name = "budget_group")
-public class Group {
+public class Group implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

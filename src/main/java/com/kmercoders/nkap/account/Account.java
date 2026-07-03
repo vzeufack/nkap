@@ -2,9 +2,13 @@ package com.kmercoders.nkap.account;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.transaction.Transaction;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +19,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -38,6 +43,9 @@ public class Account implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "app_user_id", nullable = false)
     private AppUser appUser;
+
+    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions = new ArrayList<>();
 
     public Account() {
     }
@@ -63,4 +71,6 @@ public class Account implements Serializable {
 
     public AppUser getAppUser() { return appUser; }
     public void setAppUser(AppUser appUser) { this.appUser = appUser; }
+
+    public List<Transaction> getTransactions() { return transactions; }
 }

@@ -1,14 +1,18 @@
 package com.kmercoders.nkap.category;
 
 import com.kmercoders.nkap.group.Group;
+import com.kmercoders.nkap.transaction.Transaction;
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
 @Table(name = "category")
-public class Category {
+public class Category implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +31,9 @@ public class Category {
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<BudgetCategory> budgetCategories = new HashSet<>();
 
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions = new ArrayList<>();
+
     protected Category() {}
 
     public Category(String name, Group group) {
@@ -43,4 +50,5 @@ public class Category {
     public Group getGroup()                         { return group; }
     public void setGroup(Group group)               { this.group = group; }
     public Set<BudgetCategory> getBudgetCategories(){ return budgetCategories; }
+    public List<Transaction> getTransactions()       { return transactions; }
 }

@@ -1,14 +1,18 @@
 package com.kmercoders.nkap.budget;
 
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.time.Month;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.group.Group;
+import com.kmercoders.nkap.transaction.Transaction;
 
 @Entity
 @Table(
@@ -16,7 +20,7 @@ import com.kmercoders.nkap.group.Group;
         @UniqueConstraint(columnNames = {"app_user_id", "budget_month", "budget_year"})
     }
 )
-public class Budget {
+public class Budget implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +48,9 @@ public class Budget {
 
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<BudgetCategory> budgetCategories = new HashSet<>();
+
+    @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions = new ArrayList<>();
 
     // Constructors
     public Budget() {}
@@ -80,4 +87,5 @@ public class Budget {
     }
 
     public Set<BudgetCategory> getBudgetCategories() { return budgetCategories; }
+    public List<Transaction> getTransactions()        { return transactions; }
 }

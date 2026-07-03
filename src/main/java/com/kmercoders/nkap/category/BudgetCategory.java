@@ -8,7 +8,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "budget_category")
-public class BudgetCategory {
+public class BudgetCategory implements Serializable {
 
     @EmbeddedId
     private BudgetCategoryId id = new BudgetCategoryId();
