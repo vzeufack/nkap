@@ -5,6 +5,7 @@ import com.kmercoders.nkap.account.AccountService;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
+import com.kmercoders.nkap.transaction.TransactionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,11 +28,14 @@ public class BudgetController {
     private final BudgetService budgetService;
     private final AppUserService appUserService;
     private final AccountService accountService;
+    private final TransactionService transactionService;
 
-    public BudgetController(BudgetService budgetService, AppUserService appUserService, AccountService accountService) {
-        this.budgetService = budgetService;
-        this.appUserService = appUserService;
-        this.accountService = accountService;
+    public BudgetController(BudgetService budgetService, AppUserService appUserService,
+                            AccountService accountService, TransactionService transactionService) {
+        this.budgetService      = budgetService;
+        this.appUserService     = appUserService;
+        this.accountService     = accountService;
+        this.transactionService = transactionService;
     }
 
     @GetMapping("/")
@@ -59,6 +63,7 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
+            model.addAttribute("transactions", transactionService.getTransactionsForBudget(budget.getId()));
         }
 
         return "home";
@@ -91,6 +96,7 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
+            model.addAttribute("transactions", transactionService.getTransactionsForBudget(budget.getId()));
         }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";

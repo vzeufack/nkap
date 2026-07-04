@@ -3,41 +3,38 @@ package com.kmercoders.nkap.transaction;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class TransactionDTO {
+public class TransactionSummaryDTO {
 
     private Long id;
-    private BigDecimal amount;
     private LocalDate transactionDate;
+    private BigDecimal amount;
     private TransactionType transactionType;
     private String description;
     private String note;
-    private Long accountId;
-    private Long categoryId;
-    private Long budgetId;
+    private String categoryName;
+    private String accountName;
 
-    private TransactionDTO() {}
+    private TransactionSummaryDTO() {}
 
-    public static TransactionDTO from(Transaction t) {
-        TransactionDTO dto = new TransactionDTO();
+    public static TransactionSummaryDTO from(Transaction t) {
+        TransactionSummaryDTO dto = new TransactionSummaryDTO();
         dto.id              = t.getId();
-        dto.amount          = t.getAmount();
         dto.transactionDate = t.getTransactionDate();
+        dto.amount          = t.getAmount();
         dto.transactionType = t.getTransactionType();
         dto.description     = t.getDescription();
         dto.note            = t.getNote();
-        dto.accountId       = t.getAccount()  != null ? t.getAccount().getId()  : null;
-        dto.categoryId      = t.getCategory() != null ? t.getCategory().getId() : null;
-        dto.budgetId        = t.getBudget()   != null ? t.getBudget().getId()   : null;
+        dto.categoryName    = t.getCategory() != null ? t.getCategory().getName() : null;
+        dto.accountName     = t.getAccount()  != null ? t.getAccount().getName()  : null;
         return dto;
     }
 
     public Long getId()                        { return id; }
-    public BigDecimal getAmount()              { return amount; }
     public LocalDate getTransactionDate()      { return transactionDate; }
+    public BigDecimal getAmount()              { return amount; }
     public TransactionType getTransactionType(){ return transactionType; }
     public String getDescription()             { return description; }
     public String getNote()                    { return note; }
-    public Long getAccountId()                 { return accountId; }
-    public Long getCategoryId()                { return categoryId; }
-    public Long getBudgetId()                  { return budgetId; }
+    public String getCategoryName()            { return categoryName; }
+    public String getAccountName()             { return accountName; }
 }

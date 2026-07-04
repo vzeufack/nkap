@@ -521,16 +521,16 @@ html, body {
 }
 
 /* ══════════════════════════════════════════
-   COLUMN 3 — GROUPS PANEL (col-2)
+   COLUMN 3 — TRANSACTIONS PANEL
 ══════════════════════════════════════════ */
-.groups-panel {
+.tx-panel {
     background: var(--panel-bg);
     border-left: 2px solid var(--panel-border);
     height: 100%;
     overflow: hidden;
 }
 
-.groups-panel-header {
+.tx-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -538,102 +538,134 @@ html, body {
     border-bottom: 1px solid var(--panel-border);
 }
 
-.groups-panel-header h6 {
+.tx-panel-header h6 {
     font-size: 0.95rem;
     color: var(--text-dark);
 }
 
-.groups-list {
+.tx-count {
+    font-size: 0.72rem;
+    font-family: sans-serif;
+    font-weight: bold;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    border-radius: 20px;
+    padding: 2px 9px;
+}
+
+.tx-list {
     overflow-y: auto;
-    padding: 10px 0;
+    padding: 0;
 }
 
-/* Group blocks */
-.group-block {
-    margin-bottom: 4px;
+.tx-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 18px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-family: sans-serif;
 }
 
-.group-title {
+.tx-empty-icon {
+    font-size: 2rem;
+    color: var(--panel-border);
+}
+
+.tx-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f4f8;
     gap: 8px;
-    padding: 9px 18px;
+    transition: background 0.12s;
+}
+
+.tx-row:last-child {
+    border-bottom: none;
+}
+
+.tx-row:hover {
+    background: var(--nkap-blue-light);
+}
+
+.tx-date-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 50%;
+    background: #f0f4f8;
+    line-height: 1;
+    gap: 1px;
+}
+
+.tx-date-month {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tx-date-day {
     font-family: 'Bree Serif', serif;
     font-size: 0.88rem;
     font-weight: bold;
     color: var(--text-dark);
-    background: var(--sidebar-bg);
-    cursor: pointer;
-    user-select: none;
 }
 
-.group-title:hover {
-    background: var(--nkap-blue-light);
-}
-
-.group-icon {
-    color: var(--nkap-blue);
-    width: 16px;
-    text-align: center;
-    font-size: 0.85rem;
-}
-
-.group-total {
-    font-size: 0.85rem;
-    color: var(--nkap-red);
-}
-
-.group-transactions {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.group-tx {
+.tx-row-middle {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 18px 6px 42px;
-    font-size: 0.82rem;
-    font-family: sans-serif;
-    color: var(--text-dark);
-    border-bottom: 1px solid #f0f4f8;
-    transition: background 0.12s;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
 }
 
-.group-tx:hover {
-    background: var(--nkap-blue-light);
-}
-
-.tx-name {
-    color: #4a5568;
-}
-
-.tx-amount {
-    font-weight: bold;
-    color: var(--nkap-red);
+.tx-row-description {
     font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    font-weight: bold;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Placeholder note */
-.groups-placeholder-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin: 16px;
-    padding: 12px;
-    background: var(--nkap-blue-light);
-    border-radius: 10px;
-    font-size: 0.78rem;
-    color: var(--nkap-blue-dark);
-    font-family: sans-serif;
-    line-height: 1.5;
+.tx-row-no-merchant {
+    font-weight: normal;
+    font-style: italic;
+    color: var(--text-muted);
 }
 
-.groups-placeholder-note i {
-    margin-top: 2px;
+.tx-row-category {
+    font-size: 0.75rem;
+    color: var(--nkap-blue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tx-row-amount {
+    font-family: 'Bree Serif', serif;
+    font-size: 0.88rem;
+    font-weight: bold;
+    white-space: nowrap;
     flex-shrink: 0;
 }
+
+.tx-row-amount.debit  { color: var(--nkap-red); }
+.tx-row-amount.credit { color: var(--nkap-green); }
 
 /* ══════════════════════════════════════════
    GROUP CARDS — Budget Plan column
@@ -756,17 +788,11 @@ html, body {
     cursor: default;
 }
 
-.group-card-body {
-    padding: 14px 18px;
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-}
-
 .group-card-empty-note {
     font-size: 0.82rem;
     font-family: sans-serif;
     font-style: italic;
+    padding: 14px 18px;
     margin: 0;
     color: var(--text-muted);
 }
@@ -1037,11 +1063,6 @@ html, body {
 
 .cat-balance.negative {
     color: var(--nkap-red);
-}
-
-.group-card-empty-note {
-    padding: 14px 18px;
-    margin: 0;
 }
 
 /* Category row edit button */

@@ -45,14 +45,12 @@
         </div>
 
         <div class="col-3 actions-col d-flex align-items-center justify-content-center">
-            <button class="btn btn-header btn-primary-nkap mr-2" title="Add Transaction">
+            <button class="btn btn-header btn-primary-nkap mr-2" id="btnAddTransaction"
+                    title="Add Transaction" onclick="openAddTransactionModal()">
                 <i class="fas fa-plus mr-1"></i> Add Transaction
             </button>
             <button class="btn btn-header btn-outline-nkap mr-2" title="Bulk Upload">
                 <i class="fas fa-upload mr-1"></i> Bulk Upload
-            </button>
-            <button class="btn btn-header btn-outline-nkap" title="Download Template">
-                <i class="fas fa-file-download mr-1"></i> Template
             </button>
         </div>
 
@@ -363,8 +361,109 @@
     </div>
 </div>
 
+<!-- ══ Add Transaction Modal ══ -->
+<div class="modal fade" id="addTransactionModal" tabindex="-1" role="dialog"
+     aria-labelledby="transactionModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="transactionModalTitle">New Transaction</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="form-row mb-3">
+                    <div class="form-group col-7 mb-0">
+                        <label class="nkap-input-label" for="txAmountInput">Amount</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text nkap-input-prefix">$</span>
+                            </div>
+                            <input type="number" id="txAmountInput" class="form-control nkap-input"
+                                   placeholder="0.00" min="0" step="0.01" autocomplete="off"/>
+                        </div>
+                        <div class="invalid-feedback d-block" id="txAmountError"></div>
+                    </div>
+                    <div class="form-group col-5 mb-0">
+                        <label class="nkap-input-label" for="txTypeSelect">Type</label>
+                        <select id="txTypeSelect" class="form-control nkap-input">
+                            <option value="DEBIT">Debit</option>
+                            <option value="CREDIT">Credit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txDateInput">Date</label>
+                    <input type="date" id="txDateInput" class="form-control nkap-input"/>
+                    <div class="invalid-feedback" id="txDateError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txAccountSelect">
+                        Account <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="txAccountSelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                        <option th:each="account : ${accounts}"
+                                th:value="${account.id}"
+                                th:text="${account.name}">Checking</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3" th:if="${categoriesByGroup != null and !categoriesByGroup.isEmpty()}">
+                    <label class="nkap-input-label" for="txCategorySelect">
+                        Category <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="txCategorySelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                        <optgroup th:each="entry : ${categoriesByGroup}"
+                                  th:label="${entry.value[0].category.group.name}">
+                            <option th:each="bc : ${entry.value}"
+                                    th:value="${bc.category.id}"
+                                    th:text="${bc.category.name}">Category</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txDescriptionInput">
+                        Description <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <input type="text" id="txDescriptionInput" class="form-control nkap-input"
+                           placeholder="e.g. Grocery run, Netflix subscription…" maxlength="100" autocomplete="off"/>
+                    <div class="invalid-feedback d-block" id="txDescriptionError"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="nkap-input-label" for="txNoteInput">
+                        Note <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <textarea id="txNoteInput" class="form-control nkap-input" rows="2"
+                              placeholder="Additional details…" maxlength="500" style="resize:none;"></textarea>
+                    <div class="invalid-feedback d-block" id="txNoteError"></div>
+                </div>
+                <input type="hidden" id="txBudgetId" th:value="${budget?.id}"/>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-save" id="btnSaveTransaction" onclick="saveTransaction()">
+                    <span id="btnSaveTransactionSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnSaveTransactionIcon"></i>
+                    Save Transaction
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal event bindings — once here, never re-registered on fragment swaps -->
 <script>
+    $('#addTransactionModal').on('shown.bs.modal', function() {
+        document.getElementById('txAmountInput').focus();
+    });
+
     $('#addGroupModal').on('shown.bs.modal', function() {
         document.getElementById('groupNameInput').focus();
     });
@@ -385,6 +484,9 @@
         if (e.key !== 'Enter') return;
         var active = document.activeElement;
         if (!active) return;
+        if (active.id === 'txAmountInput' ||
+            active.id === 'txDateInput'   ||
+            active.id === 'txNoteInput')             saveTransaction();
         if (active.id === 'groupNameInput')        saveGroup();
         if (active.id === 'categoryNameInput'    ||
             active.id === 'categoryAllocationInput' ||
@@ -394,6 +496,112 @@
         if (active.id === 'editAccountNameInput' ||
             active.id === 'editAccountBalanceInput') updateAccount();
     });
+
+    function openAddTransactionModal() {
+        document.getElementById('txAmountInput').value      = '';
+        document.getElementById('txTypeSelect').value       = 'DEBIT';
+        document.getElementById('txDateInput').value        = new Date().toISOString().split('T')[0];
+        document.getElementById('txDescriptionInput').value = '';
+        document.getElementById('txNoteInput').value        = '';
+        var accountSel  = document.getElementById('txAccountSelect');
+        var categorySel = document.getElementById('txCategorySelect');
+        if (accountSel)  accountSel.value  = '';
+        if (categorySel) categorySel.value = '';
+        ['txAmountInput', 'txDateInput'].forEach(function(id) {
+            document.getElementById(id).classList.remove('is-invalid');
+        });
+        ['txAmountError', 'txDateError', 'txDescriptionError', 'txNoteError'].forEach(function(id) {
+            document.getElementById(id).textContent = '';
+        });
+        $('#addTransactionModal').modal('show');
+    }
+
+    function saveTransaction() {
+        var amountInput    = document.getElementById('txAmountInput');
+        var dateInput      = document.getElementById('txDateInput');
+        var typeSelect     = document.getElementById('txTypeSelect');
+        var noteInput      = document.getElementById('txNoteInput');
+        var accountSelect  = document.getElementById('txAccountSelect');
+        var categorySelect = document.getElementById('txCategorySelect');
+        var budgetIdInput  = document.getElementById('txBudgetId');
+        var amountError    = document.getElementById('txAmountError');
+        var dateError      = document.getElementById('txDateError');
+
+        amountInput.classList.remove('is-invalid');
+        dateInput.classList.remove('is-invalid');
+        amountError.textContent = '';
+        dateError.textContent   = '';
+
+        var amountRaw = amountInput.value.trim();
+        var amount    = amountRaw === '' ? Number.NaN : Number.parseFloat(amountRaw);
+        var valid     = true;
+
+        if (Number.isNaN(amount) || amount < 0) {
+            amountInput.classList.add('is-invalid');
+            amountError.textContent = 'Please enter a valid amount (zero or positive).';
+            valid = false;
+        }
+        if (!dateInput.value) {
+            dateInput.classList.add('is-invalid');
+            dateError.textContent = 'Please select a date.';
+            valid = false;
+        }
+        if (!valid) return;
+
+        var spinner = document.getElementById('btnSaveTransactionSpinner');
+        var icon    = document.getElementById('btnSaveTransactionIcon');
+        var btn     = document.getElementById('btnSaveTransaction');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        var descriptionInput = document.getElementById('txDescriptionInput');
+        var payload = {
+            amount:          amount,
+            transactionDate: dateInput.value,
+            transactionType: typeSelect.value,
+            description:     descriptionInput.value.trim() || null,
+            note:            noteInput.value.trim() || null,
+            accountId:       accountSelect  && accountSelect.value  ? Number.parseInt(accountSelect.value, 10)  : null,
+            categoryId:      categorySelect && categorySelect.value ? Number.parseInt(categorySelect.value, 10) : null,
+            budgetId:        budgetIdInput  && budgetIdInput.value  ? Number.parseInt(budgetIdInput.value, 10)  : null
+        };
+
+        fetch('/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function() {
+            $('#addTransactionModal').modal('hide');
+            document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+        })
+        .catch(function(err) {
+            if (err && typeof err === 'object' && !err.message) {
+                if (err.amount) {
+                    amountInput.classList.add('is-invalid');
+                    amountError.textContent = err.amount;
+                }
+                if (err.transactionDate) {
+                    dateInput.classList.add('is-invalid');
+                    dateError.textContent = err.transactionDate;
+                }
+            } else {
+                amountInput.classList.add('is-invalid');
+                amountError.textContent = 'Something went wrong. Please try again.';
+            }
+            console.error('Error saving transaction:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
 
     function openEditAccountModal(btn) {
         document.getElementById('editAccountId').value             = btn.dataset.id;

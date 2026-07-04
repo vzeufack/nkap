@@ -144,47 +144,45 @@
             </div>
         </div>
 
-        <!-- ══ C-Col 3: Groups Panel (summary) ══ -->
-        <div class="groups-panel d-flex flex-column" style="flex: 1;">
+        <!-- ══ C-Col 3: Transactions Panel ══ -->
+        <div class="tx-panel d-flex flex-column" style="flex: 1;">
 
-            <div class="groups-panel-header">
-                <h6 class="bree-serif mb-0">Groups</h6>
-                <button class="btn-icon" title="Add group" onclick="openAddGroupModal()">
-                    <i class="fas fa-plus-circle"></i>
-                </button>
+            <div class="tx-panel-header">
+                <h6 class="bree-serif mb-0">Transactions</h6>
+                <span class="tx-count"
+                      th:text="${transactions != null ? transactions.size() : 0}">0</span>
             </div>
 
-            <div class="groups-list flex-grow-1" id="groupsSidePanel">
+            <div class="tx-list flex-grow-1">
 
-                <th:block th:if="${budget != null and budget.groups != null and !budget.groups.isEmpty()}">
-                    <div class="group-block" th:each="group : ${budget.groups}">
-                        <div class="group-title">
-                            <i class="fas fa-layer-group group-icon"></i>
-                            <span th:text="${group.name}">Group</span>
-                            <span class="group-total ml-auto">$0.00</span>
+                <div class="tx-empty"
+                     th:if="${transactions == null or transactions.isEmpty()}">
+                    <i class="fas fa-receipt tx-empty-icon"></i>
+                    <span>No transactions yet for this period.</span>
+                </div>
+
+                <th:block th:if="${transactions != null and !transactions.isEmpty()}">
+                    <div class="tx-row" th:each="tx : ${transactions}">
+                        <div class="tx-date-badge">
+                            <span class="tx-date-month"
+                                  th:text="${#temporals.format(tx.transactionDate, 'MMM')}">Jan</span>
+                            <span class="tx-date-day"
+                                  th:text="${#temporals.format(tx.transactionDate, 'd')}">1</span>
                         </div>
-                        <ul class="group-transactions">
-                            <th:block th:with="cats=${categoriesByGroup != null ? categoriesByGroup[group.id] : null}">
-                                <th:block th:if="${cats != null and !cats.isEmpty()}">
-                                    <li class="group-tx" th:each="bc : ${cats}">
-                                        <span class="tx-name"   th:text="${bc.category.name}">Category</span>
-                                        <span class="tx-amount" th:text="${'$' + #numbers.formatDecimal(bc.allocation, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
-                                    </li>
-                                </th:block>
-                                <li class="group-tx group-tx-empty"
-                                    th:if="${cats == null or cats.isEmpty()}">
-                                    <span class="tx-name text-muted" style="font-style: italic;">No categories yet</span>
-                                </li>
-                            </th:block>
-                        </ul>
+                        <div class="tx-row-middle">
+                            <span class="tx-row-description"
+                                  th:classappend="${tx.description == null} ? 'tx-row-no-merchant' : ''"
+                                  th:text="${tx.description ?: 'No description'}">Description</span>
+                            <span class="tx-row-category"
+                                  th:text="${tx.categoryName ?: '—'}">Category</span>
+                        </div>
+                        <span class="tx-row-amount"
+                              th:classappend="${tx.transactionType.name() == 'CREDIT'} ? 'credit' : 'debit'"
+                              th:text="${(tx.transactionType.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                            $0.00
+                        </span>
                     </div>
                 </th:block>
-
-                <div class="groups-placeholder-note"
-                     th:if="${budget == null or budget.groups == null or budget.groups.isEmpty()}">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Groups and linked transactions will appear here based on your budget plan.</span>
-                </div>
 
             </div>
         </div>

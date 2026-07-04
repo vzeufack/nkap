@@ -101,6 +101,7 @@ class TransactionControllerTest {
     @WithMockUser(username = EMAIL)
     void createTransaction_withAllFields_returns200AndCorrectPayload() throws Exception {
         TransactionRequest req = request(new BigDecimal("49.99"), TransactionType.DEBIT, LocalDate.of(2026, 1, 15));
+        req.setDescription("Grocery run");
         req.setNote("Weekly groceries");
         req.setAccountId(accountId);
         req.setCategoryId(categoryId);
@@ -114,10 +115,37 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.amount",          is(49.99)))
                 .andExpect(jsonPath("$.transactionType", is("DEBIT")))
                 .andExpect(jsonPath("$.transactionDate", is("2026-01-15")))
+                .andExpect(jsonPath("$.description",     is("Grocery run")))
                 .andExpect(jsonPath("$.note",            is("Weekly groceries")))
                 .andExpect(jsonPath("$.accountId",       is(accountId.intValue())))
                 .andExpect(jsonPath("$.categoryId",      is(categoryId.intValue())))
                 .andExpect(jsonPath("$.budgetId",        is(budgetId.intValue())));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDescriptionOnly_returnsDescriptionInResponse() throws Exception {
+        TransactionRequest req = request(new BigDecimal("20.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 10));
+        req.setDescription("Coffee shop");
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description", is("Coffee shop")))
+                .andExpect(jsonPath("$.note",        nullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withoutDescription_returnsNullDescription() throws Exception {
+        TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description", nullValue()));
     }
 
     @Test
@@ -195,6 +223,23 @@ class TransactionControllerTest {
         assertThat(saved.get(0).getNote()).isEqualTo("Utility bill");
     }
 
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_descriptionPersistedToDatabase() throws Exception {
+        TransactionRequest req = request(new BigDecimal("12.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 5));
+        req.setDescription("Bus ticket");
+        req.setAccountId(accountId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        List<Transaction> saved = transactionRepository.findByAccountId(accountId);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getDescription()).isEqualTo("Bus ticket");
+    }
+
     // ── Create: Validation failures ────────────────────────────────────────────
 
     @Test
@@ -256,6 +301,19 @@ class TransactionControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.note", notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDescriptionTooLong_returns400WithFieldError() throws Exception {
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        req.setDescription("A".repeat(101));
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.description", notNullValue()));
     }
 
     // ── Create: Not found / access isolation ──────────────────────────────────

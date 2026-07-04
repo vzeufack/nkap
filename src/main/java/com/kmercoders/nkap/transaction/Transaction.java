@@ -28,6 +28,9 @@ public class Transaction implements Serializable {
     @Column(nullable = false)
     private TransactionType transactionType;
 
+    @Column(length = 100)
+    private String description;
+
     @Column(length = 500)
     private String note;
 
@@ -66,6 +69,9 @@ public class Transaction implements Serializable {
 
     public TransactionType getTransactionType() { return transactionType; }
     public void setTransactionType(TransactionType transactionType) { this.transactionType = transactionType; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }

@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class TransactionService {
@@ -33,6 +35,13 @@ public class TransactionService {
         this.categoryRepository    = categoryRepository;
         this.budgetRepository      = budgetRepository;
         this.appUserService        = appUserService;
+    }
+
+    public List<TransactionSummaryDTO> getTransactionsForBudget(Long budgetId) {
+        return transactionRepository.findByBudgetIdOrderByTransactionDateDesc(budgetId)
+            .stream()
+            .map(TransactionSummaryDTO::from)
+            .toList();
     }
 
     @Transactional
@@ -66,6 +75,7 @@ public class TransactionService {
             category,
             budget
         );
+        transaction.setDescription(request.getDescription());
 
         return TransactionDTO.from(transactionRepository.save(transaction));
     }

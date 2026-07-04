@@ -18,6 +18,9 @@ public class TransactionRequest {
     @NotNull(message = "Transaction type is required")
     private TransactionType transactionType;
 
+    @Size(max = 100, message = "Description must be 100 characters or fewer")
+    private String description;
+
     @Size(max = 500, message = "Note must be 500 characters or fewer")
     private String note;
 
@@ -32,6 +35,8 @@ public class TransactionRequest {
     public void setTransactionDate(LocalDate date)       { this.transactionDate = date; }
     public TransactionType getTransactionType()          { return transactionType; }
     public void setTransactionType(TransactionType type) { this.transactionType = type; }
+    public String getDescription()                        { return description; }
+    public void setDescription(String description)        { this.description = description; }
     public String getNote()                              { return note; }
     public void setNote(String note)                     { this.note = note; }
     public Long getAccountId()                           { return accountId; }
