@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BudgetCategoryRepository
-        extends JpaRepository<BudgetCategory, BudgetCategory.BudgetCategoryId> {
+        extends JpaRepository<BudgetCategory, Long> {
 
     @Query("""
         SELECT bc FROM BudgetCategory bc
