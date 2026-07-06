@@ -112,10 +112,18 @@ $(document).ready(function () {
         navigateTo(getPickerDate());
     });
 
-    // Keep the transaction modal's category dropdown in sync with the budget fragment
+    // Keep the transaction modal's category dropdown and budget ID in sync with the budget fragment
     document.addEventListener('htmx:afterSettle', function() {
         rebuildCategoryDropdown();
+        syncBudgetId();
     });
+
+    function syncBudgetId() {
+        const budgetIdInput = document.getElementById('txBudgetId');
+        if (!budgetIdInput) return;
+        const budgetContent = document.querySelector('[data-budget-id]');
+        budgetIdInput.value = budgetContent ? budgetContent.dataset.budgetId : '';
+    }
 
     function rebuildCategoryDropdown() {
         const sel = document.getElementById('txCategorySelect');
@@ -123,7 +131,7 @@ $(document).ready(function () {
 
         const currentVal = sel.value;
 
-        while (sel.options.length > 1) sel.remove(1);
+        while (sel.children.length > 1) sel.lastChild.remove();
 
         document.querySelectorAll('#budget-plan-container .group-card').forEach(function(card) {
             const nameEl = card.querySelector('.group-card-name');
