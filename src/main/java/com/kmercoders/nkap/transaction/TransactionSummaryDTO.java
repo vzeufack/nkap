@@ -24,7 +24,7 @@ public class TransactionSummaryDTO {
         dto.transactionType = t.getTransactionType();
         dto.description     = t.getDescription();
         dto.note            = t.getNote();
-        dto.categoryName    = t.getCategory() != null ? t.getCategory().getName() : null;
+        dto.categoryName    = t.getBudgetCategory() != null ? t.getBudgetCategory().getCategory().getName() : null;
         dto.accountName     = t.getAccount()  != null ? t.getAccount().getName()  : null;
         return dto;
     }

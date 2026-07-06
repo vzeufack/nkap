@@ -8,6 +8,8 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserRepository;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
+import com.kmercoders.nkap.category.BudgetCategory;
+import com.kmercoders.nkap.category.BudgetCategoryRepository;
 import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryRepository;
 import com.kmercoders.nkap.group.Group;
@@ -45,6 +47,7 @@ class TransactionControllerTest {
     @Autowired private AccountRepository accountRepository;
     @Autowired private GroupRepository groupRepository;
     @Autowired private CategoryRepository categoryRepository;
+    @Autowired private BudgetCategoryRepository budgetCategoryRepository;
     @Autowired private BudgetRepository budgetRepository;
     @Autowired private TransactionRepository transactionRepository;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -78,6 +81,8 @@ class TransactionControllerTest {
 
         Budget budget = budgetRepository.save(new Budget(Month.JANUARY, 2026, user));
         budgetId = budget.getId();
+
+        budgetCategoryRepository.save(new BudgetCategory(budget, category, BigDecimal.ZERO));
     }
 
     @BeforeEach
@@ -316,6 +321,40 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.description", notNullValue()));
     }
 
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withBudgetAndCategory_persistsBudgetCategoryLink() throws Exception {
+        TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 5));
+        req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
+
+        // Response confirms the category and budget are reflected (session still open in service)
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId", is(categoryId.intValue())))
+                .andExpect(jsonPath("$.budgetId",   is(budgetId.intValue())));
+
+        List<Transaction> saved = transactionRepository.findByBudgetId(budgetId);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getBudgetCategory()).isNotNull();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withCategoryOnlyNoBudget_categoryIdIsNullInResponse() throws Exception {
+        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.now());
+        req.setCategoryId(categoryId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId", nullValue()))
+                .andExpect(jsonPath("$.budgetId",   nullValue()));
+    }
+
     // ── Create: Not found / access isolation ──────────────────────────────────
 
     @Test
@@ -364,6 +403,38 @@ class TransactionControllerTest {
     void createTransaction_withNonExistentBudget_returns404() throws Exception {
         TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
         req.setBudgetId(999999L);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withCategoryAndBudgetNotLinked_returns404() throws Exception {
+        Group otherGroup = groupRepository.save(new Group("Other"));
+        Category unlinkedCategory = categoryRepository.save(new Category("Unlinked", otherGroup));
+
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        req.setBudgetId(budgetId);
+        req.setCategoryId(unlinkedCategory.getId());
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withAnotherUsersBudget_returns404() throws Exception {
+        AppUser otherUser = new AppUser("other_budget_tx@example.com", passwordEncoder.encode("pass"));
+        appUserRepository.save(otherUser);
+        Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
+
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        req.setBudgetId(otherBudget.getId());
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)

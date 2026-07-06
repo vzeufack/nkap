@@ -107,9 +107,47 @@ $(document).ready(function () {
         navigateTo(getDateFromUrl());
     });
 
-    // Refresh fragment after a group is saved
+    // Refresh fragment after a group/category is saved
     document.addEventListener('nkap:groupSaved', function() {
         navigateTo(getPickerDate());
     });
+
+    // Keep the transaction modal's category dropdown in sync with the budget fragment
+    document.addEventListener('htmx:afterSettle', function() {
+        rebuildCategoryDropdown();
+    });
+
+    function rebuildCategoryDropdown() {
+        const sel = document.getElementById('txCategorySelect');
+        if (!sel) return;
+
+        const currentVal = sel.value;
+
+        while (sel.options.length > 1) sel.remove(1);
+
+        document.querySelectorAll('#budget-plan-container .group-card').forEach(function(card) {
+            const nameEl = card.querySelector('.group-card-name');
+            const rows   = card.querySelectorAll('.cat-row[data-category-id]');
+            if (!nameEl || rows.length === 0) return;
+
+            const optgroup  = document.createElement('optgroup');
+            optgroup.label = nameEl.textContent.trim();
+
+            rows.forEach(function(row) {
+                const catId   = row.dataset.categoryId;
+                const catName = row.querySelector('.cat-name');
+                if (!catId || !catName) return;
+
+                const opt = document.createElement('option');
+                opt.value       = catId;
+                opt.textContent = catName.textContent.trim();
+                optgroup.appendChild(opt);
+            });
+
+            sel.appendChild(optgroup);
+        });
+
+        if (currentVal) sel.value = currentVal;
+    }
 
 });

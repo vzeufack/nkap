@@ -6,7 +6,8 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
-import com.kmercoders.nkap.category.Category;
+import com.kmercoders.nkap.category.BudgetCategory;
+import com.kmercoders.nkap.category.BudgetCategoryRepository;
 import com.kmercoders.nkap.category.CategoryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,19 +23,22 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
+    private final BudgetCategoryRepository budgetCategoryRepository;
     private final BudgetRepository budgetRepository;
     private final AppUserService appUserService;
 
     public TransactionService(TransactionRepository transactionRepository,
                               AccountRepository accountRepository,
                               CategoryRepository categoryRepository,
+                              BudgetCategoryRepository budgetCategoryRepository,
                               BudgetRepository budgetRepository,
                               AppUserService appUserService) {
-        this.transactionRepository = transactionRepository;
-        this.accountRepository     = accountRepository;
-        this.categoryRepository    = categoryRepository;
-        this.budgetRepository      = budgetRepository;
-        this.appUserService        = appUserService;
+        this.transactionRepository    = transactionRepository;
+        this.accountRepository        = accountRepository;
+        this.categoryRepository       = categoryRepository;
+        this.budgetCategoryRepository = budgetCategoryRepository;
+        this.budgetRepository         = budgetRepository;
+        this.appUserService           = appUserService;
     }
 
     public List<TransactionSummaryDTO> getTransactionsForBudget(Long budgetId) {
@@ -54,16 +58,22 @@ public class TransactionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         }
 
-        Category category = null;
-        if (request.getCategoryId() != null) {
-            category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
-        }
-
         Budget budget = null;
         if (request.getBudgetId() != null) {
             budget = budgetRepository.findByIdAndAppUserId(request.getBudgetId(), appUser.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+        }
+
+        BudgetCategory budgetCategory = null;
+        if (request.getCategoryId() != null) {
+            if (!categoryRepository.existsById(request.getCategoryId())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
+            }
+            if (budget != null) {
+                budgetCategory = budgetCategoryRepository
+                    .findByBudgetIdAndCategoryId(request.getBudgetId(), request.getCategoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
+            }
         }
 
         Transaction transaction = new Transaction(
@@ -72,7 +82,7 @@ public class TransactionService {
             request.getTransactionType(),
             request.getNote(),
             account,
-            category,
+            budgetCategory,
             budget
         );
         transaction.setDescription(request.getDescription());

@@ -1,10 +1,13 @@
 package com.kmercoders.nkap.category;
 
 import com.kmercoders.nkap.budget.Budget;
+import com.kmercoders.nkap.transaction.Transaction;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -29,6 +32,9 @@ public class BudgetCategory implements Serializable {
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal allocation = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "budgetCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions = new ArrayList<>();
 
     protected BudgetCategory() {}
 

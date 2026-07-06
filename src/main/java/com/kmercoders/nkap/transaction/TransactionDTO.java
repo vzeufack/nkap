@@ -25,9 +25,9 @@ public class TransactionDTO {
         dto.transactionType = t.getTransactionType();
         dto.description     = t.getDescription();
         dto.note            = t.getNote();
-        dto.accountId       = t.getAccount()  != null ? t.getAccount().getId()  : null;
-        dto.categoryId      = t.getCategory() != null ? t.getCategory().getId() : null;
-        dto.budgetId        = t.getBudget()   != null ? t.getBudget().getId()   : null;
+        dto.accountId       = t.getAccount()         != null ? t.getAccount().getId()                          : null;
+        dto.categoryId      = t.getBudgetCategory()  != null ? t.getBudgetCategory().getCategory().getId()     : null;
+        dto.budgetId        = t.getBudget()          != null ? t.getBudget().getId()                           : null;
         return dto;
     }
 
