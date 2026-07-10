@@ -416,7 +416,7 @@ class TransactionControllerTest {
         Group otherGroup = groupRepository.save(new Group("Other"));
         Category unlinkedCategory = categoryRepository.save(new Category("Unlinked", otherGroup));
 
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 15));
         req.setBudgetId(budgetId);
         req.setCategoryId(unlinkedCategory.getId());
 
@@ -440,6 +440,56 @@ class TransactionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isNotFound());
+    }
+
+    // ── Budget date range validation ───────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDateInWrongMonth_returns400() throws Exception {
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 1));
+        req.setBudgetId(budgetId); // budget is JANUARY 2026
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDateInWrongYear_returns400() throws Exception {
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2025, Month.JANUARY, 15));
+        req.setBudgetId(budgetId); // budget is JANUARY 2026
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDateOnFirstDayOfBudgetMonth_returns200() throws Exception {
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 1));
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withDateOnLastDayOfBudgetMonth_returns200() throws Exception {
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 31));
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
     }
 
     // ── Security ───────────────────────────────────────────────────────────────

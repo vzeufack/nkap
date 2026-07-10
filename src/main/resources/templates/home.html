@@ -500,7 +500,10 @@
     function openAddTransactionModal() {
         document.getElementById('txAmountInput').value      = '';
         document.getElementById('txTypeSelect').value       = 'DEBIT';
-        document.getElementById('txDateInput').value        = new Date().toISOString().split('T')[0];
+        var _now = new Date();
+        document.getElementById('txDateInput').value = _now.getFullYear() + '-'
+            + String(_now.getMonth() + 1).padStart(2, '0') + '-'
+            + String(_now.getDate()).padStart(2, '0');
         document.getElementById('txDescriptionInput').value = '';
         document.getElementById('txNoteInput').value        = '';
         var accountSel  = document.getElementById('txAccountSelect');
@@ -590,6 +593,9 @@
                     dateInput.classList.add('is-invalid');
                     dateError.textContent = err.transactionDate;
                 }
+            } else if (err && err.status === 400 && err.message) {
+                dateInput.classList.add('is-invalid');
+                dateError.textContent = err.message;
             } else {
                 amountInput.classList.add('is-invalid');
                 amountError.textContent = 'Something went wrong. Please try again.';

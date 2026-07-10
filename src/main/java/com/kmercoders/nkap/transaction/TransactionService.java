@@ -62,6 +62,17 @@ public class TransactionService {
         if (request.getBudgetId() != null) {
             budget = budgetRepository.findByIdAndAppUserId(request.getBudgetId(), appUser.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+
+            if (request.getTransactionDate() != null) {
+                boolean wrongMonth = !request.getTransactionDate().getMonth().equals(budget.getMonth());
+                boolean wrongYear  = request.getTransactionDate().getYear()  != budget.getYear();
+                if (wrongMonth || wrongYear) {
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Transaction date must fall within the budget month (" + budget.getMonth() + " " + budget.getYear() + ")"
+                    );
+                }
+            }
         }
 
         BudgetCategory budgetCategory = null;
