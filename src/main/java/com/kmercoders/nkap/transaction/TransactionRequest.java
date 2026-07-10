@@ -27,6 +27,8 @@ public class TransactionRequest {
     private Long accountId;
 
     private Long categoryId;
+
+    @NotNull(message = "Budget is required")
     private Long budgetId;
 
     public BigDecimal getAmount()                        { return amount; }

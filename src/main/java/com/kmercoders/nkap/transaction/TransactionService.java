@@ -58,20 +58,17 @@ public class TransactionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         }
 
-        Budget budget = null;
-        if (request.getBudgetId() != null) {
-            budget = budgetRepository.findByIdAndAppUserId(request.getBudgetId(), appUser.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+        Budget budget = budgetRepository.findByIdAndAppUserId(request.getBudgetId(), appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
 
-            if (request.getTransactionDate() != null) {
-                boolean wrongMonth = !request.getTransactionDate().getMonth().equals(budget.getMonth());
-                boolean wrongYear  = request.getTransactionDate().getYear()  != budget.getYear();
-                if (wrongMonth || wrongYear) {
-                    throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Transaction date must fall within the budget month (" + budget.getMonth() + " " + budget.getYear() + ")"
-                    );
-                }
+        if (request.getTransactionDate() != null) {
+            boolean wrongMonth = !request.getTransactionDate().getMonth().equals(budget.getMonth());
+            boolean wrongYear  = request.getTransactionDate().getYear()  != budget.getYear();
+            if (wrongMonth || wrongYear) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Transaction date must fall within the budget month (" + budget.getMonth() + " " + budget.getYear() + ")"
+                );
             }
         }
 
@@ -80,11 +77,9 @@ public class TransactionService {
             if (!categoryRepository.existsById(request.getCategoryId())) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
             }
-            if (budget != null) {
-                budgetCategory = budgetCategoryRepository
-                    .findByBudgetIdAndCategoryId(request.getBudgetId(), request.getCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
-            }
+            budgetCategory = budgetCategoryRepository
+                .findByBudgetIdAndCategoryId(request.getBudgetId(), request.getCategoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
         }
 
         Transaction transaction = new Transaction(

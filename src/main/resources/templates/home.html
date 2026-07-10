@@ -46,7 +46,9 @@
 
         <div class="col-3 actions-col d-flex align-items-center justify-content-center">
             <button class="btn btn-header btn-primary-nkap mr-2" id="btnAddTransaction"
-                    title="Add Transaction" onclick="openAddTransactionModal()">
+                    th:classappend="${budget == null} ? 'd-none' : ''"
+                    title="Add Transaction"
+                    onclick="openAddTransactionModal()">
                 <i class="fas fa-plus mr-1"></i> Add Transaction
             </button>
             <button class="btn btn-header btn-outline-nkap mr-2" title="Bulk Upload">
@@ -592,6 +594,10 @@
                 if (err.transactionDate) {
                     dateInput.classList.add('is-invalid');
                     dateError.textContent = err.transactionDate;
+                }
+                if (err.budgetId) {
+                    dateInput.classList.add('is-invalid');
+                    dateError.textContent = 'Please create a budget for this period first.';
                 }
             } else if (err && err.status === 400 && err.message) {
                 dateInput.classList.add('is-invalid');

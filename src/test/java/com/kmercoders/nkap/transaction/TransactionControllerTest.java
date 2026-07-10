@@ -132,6 +132,7 @@ class TransactionControllerTest {
     void createTransaction_withDescriptionOnly_returnsDescriptionInResponse() throws Exception {
         TransactionRequest req = request(new BigDecimal("20.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 10));
         req.setDescription("Coffee shop");
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -145,6 +146,7 @@ class TransactionControllerTest {
     @WithMockUser(username = EMAIL)
     void createTransaction_withoutDescription_returnsNullDescription() throws Exception {
         TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -156,7 +158,8 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withMinimumFields_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("100.00"), TransactionType.CREDIT, LocalDate.of(2026, 3, 1));
+        TransactionRequest req = request(new BigDecimal("100.00"), TransactionType.CREDIT, LocalDate.of(2026, 1, 3));
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -166,14 +169,15 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.transactionType", is("CREDIT")))
                 .andExpect(jsonPath("$.accountId",       nullValue()))
                 .andExpect(jsonPath("$.categoryId",      nullValue()))
-                .andExpect(jsonPath("$.budgetId",        nullValue()));
+                .andExpect(jsonPath("$.budgetId",        is(budgetId.intValue())));
     }
 
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withoutAccount_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 12));
         req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -185,8 +189,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withZeroAmount_returns200() throws Exception {
-        TransactionRequest req = request(BigDecimal.ZERO, TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(BigDecimal.ZERO, TransactionType.DEBIT, LocalDate.of(2026, 1, 12));
         req.setNote("Free item with discount");
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -199,7 +204,8 @@ class TransactionControllerTest {
     @WithMockUser(username = EMAIL)
     void createTransaction_bothTransactionTypesAreAccepted() throws Exception {
         for (TransactionType type : TransactionType.values()) {
-            TransactionRequest req = request(new BigDecimal("10.00"), type, LocalDate.now());
+            TransactionRequest req = request(new BigDecimal("10.00"), type, LocalDate.of(2026, 1, 12));
+            req.setBudgetId(budgetId);
 
             mockMvc.perform(post(URL)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -212,9 +218,10 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_persistsToDatabase() throws Exception {
-        TransactionRequest req = request(new BigDecimal("75.50"), TransactionType.DEBIT, LocalDate.of(2026, 2, 20));
+        TransactionRequest req = request(new BigDecimal("75.50"), TransactionType.DEBIT, LocalDate.of(2026, 1, 20));
         req.setNote("Utility bill");
         req.setAccountId(accountId);
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -231,9 +238,10 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_descriptionPersistedToDatabase() throws Exception {
-        TransactionRequest req = request(new BigDecimal("12.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 5));
+        TransactionRequest req = request(new BigDecimal("12.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setDescription("Bus ticket");
         req.setAccountId(accountId);
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -343,16 +351,17 @@ class TransactionControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void createTransaction_withCategoryOnlyNoBudget_categoryIdIsNullInResponse() throws Exception {
-        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.now());
+    void createTransaction_withNullBudgetId_returns400WithFieldError() throws Exception {
+        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 12));
         req.setCategoryId(categoryId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.categoryId", nullValue()))
-                .andExpect(jsonPath("$.budgetId",   nullValue()));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.budgetId", notNullValue()));
+
+        assertThat(transactionRepository.count()).isZero();
     }
 
     // ── Create: Not found / access isolation ──────────────────────────────────
@@ -362,6 +371,7 @@ class TransactionControllerTest {
     void createTransaction_withNonExistentAccount_returns404() throws Exception {
         TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
         req.setAccountId(999999L);
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -379,6 +389,7 @@ class TransactionControllerTest {
 
         TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
         req.setAccountId(otherAccount.getId());
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -389,8 +400,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNonExistentCategory_returns404() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, 1, 12));
         req.setCategoryId(999999L);
+        req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)

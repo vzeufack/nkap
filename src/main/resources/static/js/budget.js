@@ -123,6 +123,11 @@ $(document).ready(function () {
         if (!budgetIdInput) return;
         const budgetContent = document.querySelector('[data-budget-id]');
         budgetIdInput.value = budgetContent ? budgetContent.dataset.budgetId : '';
+
+        const addTransactionBtn = document.getElementById('btnAddTransaction');
+        if (addTransactionBtn) {
+            addTransactionBtn.classList.toggle('d-none', !budgetContent);
+        }
     }
 
     function rebuildCategoryDropdown() {

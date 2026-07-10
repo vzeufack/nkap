@@ -42,8 +42,8 @@ public class Transaction implements Serializable {
     @JoinColumn(name = "budget_category_id")
     private BudgetCategory budgetCategory;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "budget_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "budget_id", nullable = false)
     private Budget budget;
 
     protected Transaction() {}
