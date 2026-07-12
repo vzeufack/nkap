@@ -181,6 +181,19 @@
                               th:text="${(tx.transactionType.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
                             $0.00
                         </span>
+                        <button type="button" class="tx-edit-btn" title="Edit transaction"
+                                onclick="openEditTransactionModal(this)"
+                                th:attr="data-id=${tx.id},
+                                         data-amount=${tx.amount},
+                                         data-type=${tx.transactionType.name()},
+                                         data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
+                                         data-description=${tx.description},
+                                         data-note=${tx.note},
+                                         data-account-id=${tx.accountId},
+                                         data-category-id=${tx.categoryId},
+                                         data-budget-id=${tx.budgetId}">
+                            <i class="fas fa-pen"></i>
+                        </button>
                     </div>
                 </th:block>
 

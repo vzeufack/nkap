@@ -13,6 +13,9 @@ public class TransactionSummaryDTO {
     private String note;
     private String categoryName;
     private String accountName;
+    private Long   categoryId;
+    private Long   accountId;
+    private Long   budgetId;
 
     private TransactionSummaryDTO() {}
 
@@ -26,6 +29,9 @@ public class TransactionSummaryDTO {
         dto.note            = t.getNote();
         dto.categoryName    = t.getBudgetCategory() != null ? t.getBudgetCategory().getCategory().getName() : null;
         dto.accountName     = t.getAccount()  != null ? t.getAccount().getName()  : null;
+        dto.categoryId      = t.getBudgetCategory() != null ? t.getBudgetCategory().getCategory().getId() : null;
+        dto.accountId       = t.getAccount()  != null ? t.getAccount().getId()  : null;
+        dto.budgetId        = t.getBudget().getId();
         return dto;
     }
 
@@ -37,4 +43,7 @@ public class TransactionSummaryDTO {
     public String getNote()                    { return note; }
     public String getCategoryName()            { return categoryName; }
     public String getAccountName()             { return accountName; }
+    public Long getCategoryId()                { return categoryId; }
+    public Long getAccountId()                 { return accountId; }
+    public Long getBudgetId()                  { return budgetId; }
 }

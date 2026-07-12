@@ -460,6 +460,98 @@
     </div>
 </div>
 
+<!-- ══ Edit Transaction Modal ══ -->
+<div class="modal fade" id="editTransactionModal" tabindex="-1" role="dialog"
+     aria-labelledby="editTransactionModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="editTransactionModalTitle">Edit Transaction</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <input type="hidden" id="editTxId"/>
+                <input type="hidden" id="editTxBudgetId"/>
+                <div class="form-row mb-3">
+                    <div class="form-group col-7 mb-0">
+                        <label class="nkap-input-label" for="editTxAmountInput">Amount</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text nkap-input-prefix">$</span>
+                            </div>
+                            <input type="number" id="editTxAmountInput" class="form-control nkap-input"
+                                   placeholder="0.00" min="0" step="0.01" autocomplete="off"/>
+                        </div>
+                        <div class="invalid-feedback d-block" id="editTxAmountError"></div>
+                    </div>
+                    <div class="form-group col-5 mb-0">
+                        <label class="nkap-input-label" for="editTxTypeSelect">Type</label>
+                        <select id="editTxTypeSelect" class="form-control nkap-input">
+                            <option value="DEBIT">Debit</option>
+                            <option value="CREDIT">Credit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editTxDateInput">Date</label>
+                    <input type="date" id="editTxDateInput" class="form-control nkap-input"/>
+                    <div class="invalid-feedback d-block" id="editTxDateError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editTxAccountSelect">
+                        Account <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="editTxAccountSelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                        <option th:each="account : ${accounts}"
+                                th:value="${account.id}"
+                                th:text="${account.name}">Checking</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editTxCategorySelect">
+                        Category <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="editTxCategorySelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editTxDescriptionInput">
+                        Description <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <input type="text" id="editTxDescriptionInput" class="form-control nkap-input"
+                           placeholder="e.g. Grocery run, Netflix subscription…" maxlength="100" autocomplete="off"/>
+                    <div class="invalid-feedback d-block" id="editTxDescriptionError"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="nkap-input-label" for="editTxNoteInput">
+                        Note <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <textarea id="editTxNoteInput" class="form-control nkap-input" rows="2"
+                              placeholder="Additional details…" maxlength="500" style="resize:none;"></textarea>
+                    <div class="invalid-feedback d-block" id="editTxNoteError"></div>
+                </div>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-save" id="btnUpdateTransaction" onclick="updateTransaction()">
+                    <span id="btnUpdateTransactionSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnUpdateTransactionIcon"></i>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal event bindings — once here, never re-registered on fragment swaps -->
 <script>
     $('#addTransactionModal').on('shown.bs.modal', function() {
@@ -482,21 +574,28 @@
         document.getElementById('editAccountNameInput').focus();
     });
 
+    $('#editTransactionModal').on('shown.bs.modal', function() {
+        document.getElementById('editTxAmountInput').focus();
+    });
+
     document.addEventListener('keydown', function(e) {
         if (e.key !== 'Enter') return;
         var active = document.activeElement;
         if (!active) return;
         if (active.id === 'txAmountInput' ||
             active.id === 'txDateInput'   ||
-            active.id === 'txNoteInput')             saveTransaction();
-        if (active.id === 'groupNameInput')        saveGroup();
+            active.id === 'txNoteInput')              saveTransaction();
+        if (active.id === 'editTxAmountInput' ||
+            active.id === 'editTxDateInput'   ||
+            active.id === 'editTxNoteInput')          updateTransaction();
+        if (active.id === 'groupNameInput')         saveGroup();
         if (active.id === 'categoryNameInput'    ||
             active.id === 'categoryAllocationInput' ||
-            active.id === 'categoryBalanceInput')    saveCategory();
+            active.id === 'categoryBalanceInput')     saveCategory();
         if (active.id === 'accountNameInput'     ||
-            active.id === 'accountBalanceInput')     saveAccount();
+            active.id === 'accountBalanceInput')      saveAccount();
         if (active.id === 'editAccountNameInput' ||
-            active.id === 'editAccountBalanceInput') updateAccount();
+            active.id === 'editAccountBalanceInput')  updateAccount();
     });
 
     function openAddTransactionModal() {
@@ -607,6 +706,129 @@
                 amountError.textContent = 'Something went wrong. Please try again.';
             }
             console.error('Error saving transaction:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
+
+    function openEditTransactionModal(btn) {
+        document.getElementById('editTxId').value               = btn.dataset.id;
+        document.getElementById('editTxBudgetId').value         = btn.dataset.budgetId;
+        document.getElementById('editTxAmountInput').value      = btn.dataset.amount;
+        document.getElementById('editTxTypeSelect').value       = btn.dataset.type;
+        document.getElementById('editTxDateInput').value        = btn.dataset.date;
+        document.getElementById('editTxDescriptionInput').value = btn.dataset.description || '';
+        document.getElementById('editTxNoteInput').value        = btn.dataset.note || '';
+
+        var accountSel = document.getElementById('editTxAccountSelect');
+        if (accountSel) accountSel.value = btn.dataset.accountId || '';
+
+        var srcSel  = document.getElementById('txCategorySelect');
+        var destSel = document.getElementById('editTxCategorySelect');
+        if (srcSel && destSel) {
+            destSel.innerHTML = srcSel.innerHTML;
+            destSel.value = btn.dataset.categoryId || '';
+        }
+
+        ['editTxAmountInput', 'editTxDateInput'].forEach(function(id) {
+            document.getElementById(id).classList.remove('is-invalid');
+        });
+        ['editTxAmountError', 'editTxDateError', 'editTxDescriptionError', 'editTxNoteError'].forEach(function(id) {
+            document.getElementById(id).textContent = '';
+        });
+        $('#editTransactionModal').modal('show');
+    }
+
+    function updateTransaction() {
+        var amountInput    = document.getElementById('editTxAmountInput');
+        var dateInput      = document.getElementById('editTxDateInput');
+        var typeSelect     = document.getElementById('editTxTypeSelect');
+        var noteInput      = document.getElementById('editTxNoteInput');
+        var accountSelect  = document.getElementById('editTxAccountSelect');
+        var categorySelect = document.getElementById('editTxCategorySelect');
+        var budgetIdInput  = document.getElementById('editTxBudgetId');
+        var amountError    = document.getElementById('editTxAmountError');
+        var dateError      = document.getElementById('editTxDateError');
+
+        amountInput.classList.remove('is-invalid');
+        dateInput.classList.remove('is-invalid');
+        amountError.textContent = '';
+        dateError.textContent   = '';
+
+        var amountRaw = amountInput.value.trim();
+        var amount    = amountRaw === '' ? Number.NaN : Number.parseFloat(amountRaw);
+        var valid     = true;
+
+        if (Number.isNaN(amount) || amount < 0) {
+            amountInput.classList.add('is-invalid');
+            amountError.textContent = 'Please enter a valid amount (zero or positive).';
+            valid = false;
+        }
+        if (!dateInput.value) {
+            dateInput.classList.add('is-invalid');
+            dateError.textContent = 'Please select a date.';
+            valid = false;
+        }
+        if (!valid) return;
+
+        var spinner = document.getElementById('btnUpdateTransactionSpinner');
+        var icon    = document.getElementById('btnUpdateTransactionIcon');
+        var btn     = document.getElementById('btnUpdateTransaction');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        var descriptionInput = document.getElementById('editTxDescriptionInput');
+        var id = document.getElementById('editTxId').value;
+        var payload = {
+            amount:          amount,
+            transactionDate: dateInput.value,
+            transactionType: typeSelect.value,
+            description:     descriptionInput.value.trim() || null,
+            note:            noteInput.value.trim() || null,
+            accountId:       accountSelect  && accountSelect.value  ? Number.parseInt(accountSelect.value, 10)  : null,
+            categoryId:      categorySelect && categorySelect.value ? Number.parseInt(categorySelect.value, 10) : null,
+            budgetId:        budgetIdInput  && budgetIdInput.value  ? Number.parseInt(budgetIdInput.value, 10)  : null
+        };
+
+        fetch('/transactions/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function() {
+            $('#editTransactionModal').modal('hide');
+            document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+        })
+        .catch(function(err) {
+            if (err && typeof err === 'object' && !err.message) {
+                if (err.amount) {
+                    amountInput.classList.add('is-invalid');
+                    amountError.textContent = err.amount;
+                }
+                if (err.transactionDate) {
+                    dateInput.classList.add('is-invalid');
+                    dateError.textContent = err.transactionDate;
+                }
+                if (err.budgetId) {
+                    dateInput.classList.add('is-invalid');
+                    dateError.textContent = 'Please create a budget for this period first.';
+                }
+            } else if (err && err.status === 400 && err.message) {
+                dateInput.classList.add('is-invalid');
+                dateError.textContent = err.message;
+            } else {
+                amountInput.classList.add('is-invalid');
+                amountError.textContent = 'Something went wrong. Please try again.';
+            }
+            console.error('Error updating transaction:', err);
         })
         .finally(function() {
             spinner.classList.add('d-none');

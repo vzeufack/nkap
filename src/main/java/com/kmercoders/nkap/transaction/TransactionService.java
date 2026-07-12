@@ -49,6 +49,55 @@ public class TransactionService {
     }
 
     @Transactional
+    public TransactionDTO updateTransaction(Long transactionId, TransactionRequest request) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+
+        Account account = null;
+        if (request.getAccountId() != null) {
+            account = accountRepository.findByIdAndAppUser(request.getAccountId(), appUser)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        }
+
+        Budget budget = budgetRepository.findByIdAndAppUserId(request.getBudgetId(), appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+
+        if (request.getTransactionDate() != null) {
+            boolean wrongMonth = !request.getTransactionDate().getMonth().equals(budget.getMonth());
+            boolean wrongYear  = request.getTransactionDate().getYear()  != budget.getYear();
+            if (wrongMonth || wrongYear) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Transaction date must fall within the budget month (" + budget.getMonth() + " " + budget.getYear() + ")"
+                );
+            }
+        }
+
+        BudgetCategory budgetCategory = null;
+        if (request.getCategoryId() != null) {
+            if (!categoryRepository.existsById(request.getCategoryId())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
+            }
+            budgetCategory = budgetCategoryRepository
+                .findByBudgetIdAndCategoryId(request.getBudgetId(), request.getCategoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
+        }
+
+        transaction.setAmount(request.getAmount());
+        transaction.setTransactionDate(request.getTransactionDate());
+        transaction.setTransactionType(request.getTransactionType());
+        transaction.setDescription(request.getDescription());
+        transaction.setNote(request.getNote());
+        transaction.setAccount(account);
+        transaction.setBudgetCategory(budgetCategory);
+        transaction.setBudget(budget);
+
+        return TransactionDTO.from(transactionRepository.save(transaction));
+    }
+
+    @Transactional
     public TransactionDTO createTransaction(TransactionRequest request) {
         AppUser appUser = appUserService.getAuthenticatedUser();
 
