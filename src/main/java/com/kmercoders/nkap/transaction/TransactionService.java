@@ -144,4 +144,14 @@ public class TransactionService {
 
         return TransactionDTO.from(transactionRepository.save(transaction));
     }
+
+    @Transactional
+    public void deleteTransaction(Long transactionId) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+
+        transactionRepository.delete(transaction);
+    }
 }

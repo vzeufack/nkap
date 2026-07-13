@@ -690,6 +690,29 @@ html, body {
     background: rgba(36, 160, 237, 0.12);
 }
 
+.tx-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #aab;
+    padding: 4px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+.tx-row:hover .tx-delete-btn {
+    opacity: 1;
+}
+.tx-delete-btn:hover {
+    color: var(--nkap-red);
+    background: rgba(237, 36, 36, 0.12);
+}
+
 /* ══════════════════════════════════════════
    GROUP CARDS — Budget Plan column
 ══════════════════════════════════════════ */

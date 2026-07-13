@@ -837,6 +837,23 @@
         });
     }
 
+    function deleteTransaction(btn) {
+        if (!confirm('Delete this transaction? This cannot be undone.')) return;
+
+        var id = btn.dataset.id;
+        btn.disabled = true;
+
+        fetch('/transactions/' + id, { method: 'DELETE' })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed: ' + response.status);
+            document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+        })
+        .catch(function(err) {
+            console.error('Error deleting transaction:', err);
+            btn.disabled = false;
+        });
+    }
+
     function openEditAccountModal(btn) {
         document.getElementById('editAccountId').value             = btn.dataset.id;
         document.getElementById('editAccountNameInput').value      = btn.dataset.name;

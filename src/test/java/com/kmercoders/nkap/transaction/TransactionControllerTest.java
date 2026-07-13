@@ -900,4 +900,70 @@ class TransactionControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().is(anyOf(is(401), is(302))));
     }
+
+    // ── Delete: Happy path ─────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_withExistingId_returns204() throws Exception {
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+
+        mockMvc.perform(delete(URL + "/{id}", existing.getId()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_removesFromDatabase() throws Exception {
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+
+        mockMvc.perform(delete(URL + "/{id}", existing.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(transactionRepository.findById(existing.getId())).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_doesNotAffectOtherTransactions() throws Exception {
+        Transaction toDelete = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction toKeep   = seedTransaction(new BigDecimal("20.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 6));
+
+        mockMvc.perform(delete(URL + "/{id}", toDelete.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(transactionRepository.findById(toKeep.getId())).isPresent();
+    }
+
+    // ── Delete: Not found / access isolation ──────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_withNonExistentId_returns404() throws Exception {
+        mockMvc.perform(delete(URL + "/{id}", 999999L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_withAnotherUsersTransaction_returns404() throws Exception {
+        AppUser otherUser = new AppUser("other_delete_tx@example.com", passwordEncoder.encode("pass"));
+        appUserRepository.save(otherUser);
+        Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
+        Transaction otherTx = new Transaction(new BigDecimal("10.00"), LocalDate.of(2026, Month.MARCH, 1), TransactionType.DEBIT, null, null, null, otherBudget);
+        transactionRepository.save(otherTx);
+
+        mockMvc.perform(delete(URL + "/{id}", otherTx.getId()))
+                .andExpect(status().isNotFound());
+
+        assertThat(transactionRepository.findById(otherTx.getId())).isPresent();
+    }
+
+    // ── Delete: Security ───────────────────────────────────────────────────────
+
+    @Test
+    void deleteTransaction_withoutAuthentication_returns401or302() throws Exception {
+        mockMvc.perform(delete(URL + "/{id}", 1L))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
 }

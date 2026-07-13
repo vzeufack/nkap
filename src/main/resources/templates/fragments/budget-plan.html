@@ -194,6 +194,11 @@
                                          data-budget-id=${tx.budgetId}">
                             <i class="fas fa-pen"></i>
                         </button>
+                        <button type="button" class="tx-delete-btn" title="Delete transaction"
+                                onclick="deleteTransaction(this)"
+                                th:attr="data-id=${tx.id}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
                     </div>
                 </th:block>
 
