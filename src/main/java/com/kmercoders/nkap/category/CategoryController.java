@@ -68,4 +68,14 @@ public class CategoryController {
         CategoryDTO updated = categoryService.updateCategory(budgetId, groupId, categoryId, request);
         return ResponseEntity.ok(updated);
     }
+
+    @DeleteMapping("/{categoryId}")
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable("budgetId") Long budgetId,
+            @PathVariable("groupId") Long groupId,
+            @PathVariable("categoryId") Long categoryId) {
+
+        categoryService.deleteCategory(budgetId, groupId, categoryId);
+        return ResponseEntity.noContent().build();
+    }
 }

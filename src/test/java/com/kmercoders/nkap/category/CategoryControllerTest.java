@@ -9,6 +9,9 @@ import com.kmercoders.nkap.budget.BudgetService;
 import com.kmercoders.nkap.group.Group;
 import com.kmercoders.nkap.group.GroupDTO;
 import com.kmercoders.nkap.group.GroupRepository;
+import com.kmercoders.nkap.transaction.TransactionRepository;
+import com.kmercoders.nkap.transaction.TransactionRequest;
+import com.kmercoders.nkap.transaction.TransactionType;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,9 +21,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
 
@@ -44,6 +49,7 @@ class CategoryControllerTest {
     @Autowired private GroupRepository groupRepository;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private BudgetCategoryRepository budgetCategoryRepository;
+    @Autowired private TransactionRepository transactionRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
     private static final String EMAIL = "category_user@example.com";
@@ -60,6 +66,7 @@ class CategoryControllerTest {
 
     @BeforeEach
     void setUp() {
+        transactionRepository.deleteAll();
         budgetCategoryRepository.deleteAll();
         categoryRepository.deleteAll();
         budgetRepository.deleteAll();
@@ -510,6 +517,130 @@ class CategoryControllerTest {
         mockMvc.perform(put(url(1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
+
+    // ── Delete: Happy path ─────────────────────────────────────────────────────
+
+    private Long createCategoryAndGetId(String name, BigDecimal allocation, BigDecimal balance) throws Exception {
+        CategoryRequest createReq = request(name, allocation, balance);
+        String response = mockMvc.perform(post(url())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return objectMapper.readTree(response).get("id").asLong();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_withZeroBalanceAndNoTransactions_returns204() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        mockMvc.perform(delete(url(categoryId)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_whenLastReferencingBudgetCategory_alsoDeletesCategory() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        mockMvc.perform(delete(url(categoryId)))
+                .andExpect(status().isNoContent());
+
+        assertThat(budgetCategoryRepository.findByBudgetId(budget.getId())).isEmpty();
+        assertThat(categoryRepository.findById(categoryId)).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_whenOtherBudgetCategoryStillReferencesCategory_keepsCategory() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        // createBudget rolls forward groups/categories from the prior budget, so `otherBudget`
+        // ends up with its own BudgetCategory row referencing the same Category.
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Budget otherBudget = budgetService.createBudget(user, Month.FEBRUARY, 2025);
+        assertThat(budgetCategoryRepository.findByBudgetIdAndCategoryId(otherBudget.getId(), categoryId)).isPresent();
+
+        mockMvc.perform(delete(url(categoryId)))
+                .andExpect(status().isNoContent());
+
+        assertThat(budgetCategoryRepository.findByBudgetId(budget.getId())).isEmpty();
+        assertThat(categoryRepository.findById(categoryId)).isPresent();
+        assertThat(budgetCategoryRepository.findByBudgetId(otherBudget.getId())).hasSize(1);
+    }
+
+    // ── Delete: Domain failures ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_withNonZeroBalance_returns400AndDoesNotDelete() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("25.00"));
+
+        mockMvc.perform(delete(url(categoryId)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(categoryRepository.findById(categoryId)).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_withLinkedTransaction_returns400AndDoesNotDelete() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        TransactionRequest txReq = new TransactionRequest();
+        txReq.setAmount(new BigDecimal("10.00"));
+        txReq.setTransactionDate(LocalDate.of(2025, 1, 15));
+        txReq.setTransactionType(TransactionType.DEBIT);
+        txReq.setCategoryId(categoryId);
+        txReq.setBudgetId(budget.getId());
+
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(txReq)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete(url(categoryId)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(categoryRepository.findById(categoryId)).isPresent();
+        assertThat(budgetCategoryRepository.findByBudgetIdAndCategoryId(budget.getId(), categoryId)).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteCategory_withUnknownCategoryId_returns404() throws Exception {
+        mockMvc.perform(delete(url(999L)))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── Delete: Security ───────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "someone_else@example.com")
+    void deleteCategory_forBudgetBelongingToAnotherUser_returns404() throws Exception {
+        AppUser otherUser = new AppUser("someone_else@example.com", passwordEncoder.encode("somepassword"));
+        appUserRepository.save(otherUser);
+
+        // Category belongs to `budget`, which is owned by EMAIL, not otherUser.
+        Category category = new Category("Meat", group);
+        category.setBalance(BigDecimal.ZERO);
+        categoryRepository.save(category);
+        BudgetCategory bc = new BudgetCategory(budget, category, new BigDecimal("150.00"));
+        budgetCategoryRepository.save(bc);
+
+        mockMvc.perform(delete(url(category.getId())))
+                .andExpect(status().isNotFound());
+
+        assertThat(categoryRepository.findById(category.getId())).isPresent();
+    }
+
+    @Test
+    void deleteCategory_withoutAuthentication_returns401or302() throws Exception {
+        mockMvc.perform(delete(url(1L)))
                 .andExpect(status().is(anyOf(is(401), is(302))));
     }
 }

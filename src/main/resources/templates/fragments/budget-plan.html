@@ -90,11 +90,14 @@
                                                     <th class="cat-col-number">Allocated</th>
                                                     <th class="cat-col-number">Balance</th>
                                                     <th class="cat-col-action"></th>
+                                                    <th class="cat-col-action"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr th:each="bc : ${cats}"
                                                     th:attr="data-category-id=${bc.category.id}"
+                                                    th:with="hasTransactions=${categoryIdsWithTransactions != null and categoryIdsWithTransactions.contains(bc.category.id)},
+                                                             hasBalance=${bc.category.balance != 0}"
                                                     class="cat-row">
                                                     <td class="cat-name" th:text="${bc.category.name}">Category</td>
                                                     <td class="cat-allocated"
@@ -107,6 +110,24 @@
                                                                 th:attr="onclick='openEditCategoryModal(' + ${bc.category.id} + ', \'' + ${group.id} + '\', \'' + ${group.name} + '\', \'' + ${bc.category.name} + '\', ' + ${bc.allocation} + ', ' + ${bc.category.balance} + ')'"
                                                                 title="Edit category">
                                                             <i class="fas fa-pencil-alt"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td class="cat-action">
+                                                        <span class="cat-delete-tooltip-wrap"
+                                                              th:if="${hasTransactions or hasBalance}"
+                                                              th:title="${(hasTransactions and hasBalance) ? 'Cannot delete: category has transactions and a non-zero balance' : (hasTransactions ? 'Cannot delete: category has transactions linked to it' : 'Cannot delete: category balance must be $0.00')}">
+                                                            <button class="btn-icon btn-delete-category" disabled="disabled">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </span>
+                                                        <button class="btn-icon btn-delete-category"
+                                                                th:unless="${hasTransactions or hasBalance}"
+                                                                th:attr="onclick='deleteCategory(this)',
+                                                                         data-budget-id=${budget.id},
+                                                                         data-group-id=${group.id},
+                                                                         data-category-id=${bc.category.id}"
+                                                                title="Delete category">
+                                                            <i class="fas fa-trash-alt"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -445,6 +466,29 @@
             .finally(function() {
                 spinner.classList.add('d-none');
                 icon.classList.remove('d-none');
+                btn.disabled = false;
+            });
+        }
+
+        // ── Category: Delete ───────────────────────────────────
+        function deleteCategory(btn) {
+            if (!confirm('Delete this category? This cannot be undone.')) return;
+
+            var budgetId   = btn.getAttribute('data-budget-id');
+            var groupId    = btn.getAttribute('data-group-id');
+            var categoryId = btn.getAttribute('data-category-id');
+            btn.disabled = true;
+
+            fetch('/budgets/' + budgetId + '/groups/' + groupId + '/categories/' + categoryId, {
+                method: 'DELETE'
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Request failed: ' + response.status);
+                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+            })
+            .catch(function(err) {
+                console.error('Error deleting category:', err);
+                alert('Could not delete this category. It may have transactions linked to it or a non-zero balance.');
                 btn.disabled = false;
             });
         }

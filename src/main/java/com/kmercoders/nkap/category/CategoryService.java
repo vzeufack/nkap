@@ -1,11 +1,16 @@
 package com.kmercoders.nkap.category;
 
+import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.group.Group;
 import com.kmercoders.nkap.group.GroupRepository;
+import com.kmercoders.nkap.transaction.TransactionRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -17,15 +22,21 @@ public class CategoryService {
     private final BudgetCategoryRepository budgetCategoryRepository;
     private final BudgetRepository budgetRepository;
     private final GroupRepository groupRepository;
+    private final TransactionRepository transactionRepository;
+    private final AppUserService appUserService;
 
     public CategoryService(CategoryRepository categoryRepository,
                            BudgetCategoryRepository budgetCategoryRepository,
                            BudgetRepository budgetRepository,
-                           GroupRepository groupRepository) {
+                           GroupRepository groupRepository,
+                           TransactionRepository transactionRepository,
+                           AppUserService appUserService) {
         this.categoryRepository       = categoryRepository;
         this.budgetCategoryRepository = budgetCategoryRepository;
         this.budgetRepository         = budgetRepository;
         this.groupRepository          = groupRepository;
+        this.transactionRepository    = transactionRepository;
+        this.appUserService           = appUserService;
     }
 
     @Transactional
@@ -83,5 +94,35 @@ public class CategoryService {
         }
 
         return CategoryDTO.from(bc);
+    }
+
+    @Transactional
+    public void deleteCategory(Long budgetId, Long groupId, Long categoryId) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        budgetRepository.findByIdAndAppUserId(budgetId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+
+        BudgetCategory bc = budgetCategoryRepository
+            .findByBudgetIdAndCategoryIdAndCategoryGroupId(budgetId, categoryId, groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in this group."));
+
+        if (transactionRepository.existsByBudgetCategoryId(bc.getId())) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Cannot delete a category that has transactions linked to it.");
+        }
+
+        Category category = bc.getCategory();
+        if (category.getBalance().compareTo(BigDecimal.ZERO) != 0) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Cannot delete a category with a non-zero balance.");
+        }
+
+        budgetCategoryRepository.delete(bc);
+        budgetCategoryRepository.flush();
+
+        if (!budgetCategoryRepository.existsByCategoryId(category.getId())) {
+            categoryRepository.delete(category);
+        }
     }
 }

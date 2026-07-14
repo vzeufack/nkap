@@ -23,4 +23,6 @@ public interface BudgetCategoryRepository
 
     Optional<BudgetCategory> findByBudgetIdAndCategoryIdAndCategoryGroupId(
         Long budgetId, Long categoryId, Long groupId);
+
+    boolean existsByCategoryId(Long categoryId);
 }

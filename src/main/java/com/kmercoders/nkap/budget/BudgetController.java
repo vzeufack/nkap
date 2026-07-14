@@ -6,6 +6,7 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.transaction.TransactionService;
+import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,6 +15,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
@@ -66,7 +69,15 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
-            model.addAttribute("transactions", transactionService.getTransactionsForBudget(budget.getId()));
+
+            List<TransactionSummaryDTO> transactions = transactionService.getTransactionsForBudget(budget.getId());
+            model.addAttribute("transactions", transactions);
+
+            Set<Long> categoryIdsWithTransactions = transactions.stream()
+                .map(TransactionSummaryDTO::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+            model.addAttribute("categoryIdsWithTransactions", categoryIdsWithTransactions);
         }
 
         return "home";
@@ -102,7 +113,15 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
-            model.addAttribute("transactions", transactionService.getTransactionsForBudget(budget.getId()));
+
+            List<TransactionSummaryDTO> transactions = transactionService.getTransactionsForBudget(budget.getId());
+            model.addAttribute("transactions", transactions);
+
+            Set<Long> categoryIdsWithTransactions = transactions.stream()
+                .map(TransactionSummaryDTO::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+            model.addAttribute("categoryIdsWithTransactions", categoryIdsWithTransactions);
         }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";

@@ -10,4 +10,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByBudgetId(Long budgetId);
     List<Transaction> findByBudgetIdOrderByTransactionDateDesc(Long budgetId);
     Optional<Transaction> findByIdAndBudgetAppUserId(Long id, Long appUserId);
+    boolean existsByBudgetCategoryId(Long budgetCategoryId);
 }
