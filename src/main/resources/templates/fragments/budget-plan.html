@@ -54,6 +54,8 @@
 
                     <div class="group-cards-list" id="groupCardsList">
                         <div class="group-card" th:each="group : ${budget.groups}"
+                             th:with="cats=${categoriesByGroup != null ? categoriesByGroup[group.id] : null},
+                                      hasCategories=${cats != null and !cats.isEmpty()}"
                              th:attr="data-group-id=${group.id},data-group-default=${group.isDefault()}">
 
                             <!-- Card header -->
@@ -76,13 +78,27 @@
                                           title="Default group cannot be renamed">
                                         <i class="fas fa-lock"></i>
                                     </span>
+                                    <span class="group-delete-tooltip-wrap"
+                                          th:if="${!group.isDefault() and hasCategories}"
+                                          title="Cannot delete: group has categories linked to it">
+                                        <button class="btn-icon btn-delete-group" disabled="disabled">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </span>
+                                    <button class="btn-icon btn-delete-group"
+                                            th:if="${!group.isDefault() and !hasCategories}"
+                                            th:attr="onclick='deleteGroup(this)',
+                                                     data-budget-id=${budget.id},
+                                                     data-group-id=${group.id}"
+                                            title="Delete group">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- Card body: category table -->
                             <div class="group-card-body">
-                                <th:block th:with="cats=${categoriesByGroup != null ? categoriesByGroup[group.id] : null}">
-                                    <th:block th:if="${cats != null and !cats.isEmpty()}">
+                                <th:block th:if="${cats != null and !cats.isEmpty()}">
                                         <table class="category-table">
                                             <thead>
                                                 <tr>
@@ -133,12 +149,11 @@
                                                 </tr>
                                             </tbody>
                                         </table>
-                                    </th:block>
-                                    <p class="group-card-empty-note"
-                                       th:if="${cats == null or cats.isEmpty()}">
-                                        No categories yet.
-                                    </p>
                                 </th:block>
+                                <p class="group-card-empty-note"
+                                   th:if="${cats == null or cats.isEmpty()}">
+                                    No categories yet.
+                                </p>
                             </div>
 
                             <!-- Card footer: add category -->
@@ -489,6 +504,28 @@
             .catch(function(err) {
                 console.error('Error deleting category:', err);
                 alert('Could not delete this category. It may have transactions linked to it or a non-zero balance.');
+                btn.disabled = false;
+            });
+        }
+
+        // ── Group: Delete ──────────────────────────────────────
+        function deleteGroup(btn) {
+            if (!confirm('Delete this group? This cannot be undone.')) return;
+
+            var budgetId = btn.getAttribute('data-budget-id');
+            var groupId  = btn.getAttribute('data-group-id');
+            btn.disabled = true;
+
+            fetch('/budgets/' + budgetId + '/groups/' + groupId, {
+                method: 'DELETE'
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Request failed: ' + response.status);
+                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+            })
+            .catch(function(err) {
+                console.error('Error deleting group:', err);
+                alert('Could not delete this group. It may have categories linked to it.');
                 btn.disabled = false;
             });
         }

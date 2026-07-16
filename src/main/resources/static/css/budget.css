@@ -834,6 +834,39 @@ html, body {
     cursor: default;
 }
 
+.btn-delete-group {
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 4px 6px;
+}
+
+.group-card-header:hover .btn-delete-group {
+    opacity: 1;
+}
+
+.btn-delete-group:hover:not(:disabled) {
+    color: var(--nkap-red);
+    transform: scale(1.15);
+}
+
+.btn-delete-group:disabled {
+    cursor: not-allowed;
+    color: var(--text-muted);
+    opacity: 0.35;
+}
+
+/* Wrapper needed so the tooltip still shows on hover — disabled buttons
+   don't receive mouse events, so the title must live on the parent span. */
+.group-delete-tooltip-wrap {
+    display: inline-block;
+}
+
+.group-card-header:hover .group-delete-tooltip-wrap .btn-delete-group {
+    opacity: 0.35;
+}
+
 .group-card-empty-note {
     font-size: 0.82rem;
     font-family: sans-serif;

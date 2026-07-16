@@ -25,4 +25,6 @@ public interface BudgetCategoryRepository
         Long budgetId, Long categoryId, Long groupId);
 
     boolean existsByCategoryId(Long categoryId);
+
+    boolean existsByBudgetIdAndCategoryGroupId(Long budgetId, Long groupId);
 }
