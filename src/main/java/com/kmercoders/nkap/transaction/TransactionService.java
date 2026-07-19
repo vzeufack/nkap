@@ -8,12 +8,14 @@ import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.BudgetCategoryRepository;
+import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -55,6 +57,10 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
 
+        Account oldAccount = transaction.getAccount();
+        BudgetCategory oldBudgetCategory = transaction.getBudgetCategory();
+        BigDecimal oldSignedAmount = signedAmount(transaction.getAmount(), transaction.getTransactionType());
+
         Account account = null;
         if (request.getAccountId() != null) {
             account = accountRepository.findByIdAndAppUser(request.getAccountId(), appUser)
@@ -84,6 +90,9 @@ public class TransactionService {
                 .findByBudgetIdAndCategoryId(request.getBudgetId(), request.getCategoryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
         }
+
+        applyBalanceDelta(oldAccount, oldBudgetCategory, oldSignedAmount.negate());
+        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getTransactionType()));
 
         transaction.setAmount(request.getAmount());
         transaction.setTransactionDate(request.getTransactionDate());
@@ -142,6 +151,8 @@ public class TransactionService {
         );
         transaction.setDescription(request.getDescription());
 
+        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getTransactionType()));
+
         return TransactionDTO.from(transactionRepository.save(transaction));
     }
 
@@ -152,6 +163,23 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
 
+        BigDecimal signedAmount = signedAmount(transaction.getAmount(), transaction.getTransactionType());
+        applyBalanceDelta(transaction.getAccount(), transaction.getBudgetCategory(), signedAmount.negate());
+
         transactionRepository.delete(transaction);
+    }
+
+    private BigDecimal signedAmount(BigDecimal amount, TransactionType type) {
+        return type == TransactionType.DEBIT ? amount.negate() : amount;
+    }
+
+    private void applyBalanceDelta(Account account, BudgetCategory budgetCategory, BigDecimal signedAmount) {
+        if (account != null) {
+            account.setBalance(account.getBalance().add(signedAmount));
+        }
+        if (budgetCategory != null) {
+            Category category = budgetCategory.getCategory();
+            category.setBalance(category.getBalance().add(signedAmount));
+        }
     }
 }

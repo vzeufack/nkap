@@ -254,6 +254,94 @@ class TransactionControllerTest {
         assertThat(saved.get(0).getDescription()).isEqualTo("Bus ticket");
     }
 
+    // ── Create: Balance updates ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_debit_decreasesAccountAndCategoryBalance() throws Exception {
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BigDecimal accountBalanceBefore = account.getBalance();
+        Category category = categoryRepository.findById(categoryId).orElseThrow();
+        BigDecimal categoryBalanceBefore = category.getBalance();
+
+        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        req.setAccountId(accountId);
+        req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.subtract(new BigDecimal("40.00")));
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.subtract(new BigDecimal("40.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_credit_increasesAccountAndCategoryBalance() throws Exception {
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BigDecimal accountBalanceBefore = account.getBalance();
+        Category category = categoryRepository.findById(categoryId).orElseThrow();
+        BigDecimal categoryBalanceBefore = category.getBalance();
+
+        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 15));
+        req.setAccountId(accountId);
+        req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.add(new BigDecimal("40.00")));
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.add(new BigDecimal("40.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withoutAccount_doesNotChangeCategoryBalanceOnlyAffectsAccount() throws Exception {
+        Category category = categoryRepository.findById(categoryId).orElseThrow();
+        BigDecimal categoryBalanceBefore = category.getBalance();
+
+        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.subtract(new BigDecimal("15.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createTransaction_withoutCategory_onlyAffectsAccountBalance() throws Exception {
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BigDecimal accountBalanceBefore = account.getBalance();
+
+        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        req.setAccountId(accountId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.subtract(new BigDecimal("15.00")));
+    }
+
     // ── Create: Validation failures ────────────────────────────────────────────
 
     @Test
@@ -632,6 +720,120 @@ class TransactionControllerTest {
         assertThat(transactionRepository.count()).isEqualTo(1);
     }
 
+    // ── Update: Balance updates ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateTransaction_changingAmount_adjustsAccountAndCategoryBalanceByDelta() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("30.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
+        BigDecimal categoryBalanceBefore = categoryRepository.findById(categoryId).orElseThrow().getBalance();
+
+        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        req.setAccountId(accountId);
+        req.setCategoryId(categoryId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(put(URL + "/{id}", existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        // Reverses the old -30 debit, applies the new -50 debit: net delta is -20
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.subtract(new BigDecimal("20.00")));
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.subtract(new BigDecimal("20.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateTransaction_reassigningToAnotherAccount_movesBalanceEffect() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account otherAccount = accountRepository.save(
+            new Account(AccountType.SAVINGS, "Reassign Target Account", new BigDecimal("200.00"), user));
+
+        Budget budget  = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("25.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, null, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal originalAccountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
+        BigDecimal otherAccountBalanceBefore     = otherAccount.getBalance();
+
+        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        req.setAccountId(otherAccount.getId());
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(put(URL + "/{id}", existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId", is(otherAccount.getId().intValue())));
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(originalAccountBalanceBefore.add(new BigDecimal("25.00")));
+        assertThat(accountRepository.findById(otherAccount.getId()).orElseThrow().getBalance())
+            .isEqualByComparingTo(otherAccountBalanceBefore.subtract(new BigDecimal("25.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateTransaction_clearingAccountAndCategory_reversesOldBalanceEffect() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("40.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
+        BigDecimal categoryBalanceBefore = categoryRepository.findById(categoryId).orElseThrow().getBalance();
+
+        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(put(URL + "/{id}", existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId",  nullValue()))
+                .andExpect(jsonPath("$.categoryId", nullValue()));
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.add(new BigDecimal("40.00")));
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.add(new BigDecimal("40.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateTransaction_changingTypeFromDebitToCredit_adjustsBalanceBothWays() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("20.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, null, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal accountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
+
+        TransactionRequest req = request(new BigDecimal("20.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 5));
+        req.setAccountId(accountId);
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(put(URL + "/{id}", existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+
+        // Reverses the -20 debit (+20), then applies the new +20 credit: net delta is +40
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.add(new BigDecimal("40.00")));
+    }
+
     // ── Update: Validation failures ────────────────────────────────────────────
 
     @Test
@@ -933,6 +1135,55 @@ class TransactionControllerTest {
                 .andExpect(status().isNoContent());
 
         assertThat(transactionRepository.findById(toKeep.getId())).isPresent();
+    }
+
+    // ── Delete: Balance updates ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_debit_reversesAccountAndCategoryBalance() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("35.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
+        BigDecimal categoryBalanceBefore = categoryRepository.findById(categoryId).orElseThrow().getBalance();
+
+        mockMvc.perform(delete(URL + "/{id}", existing.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.add(new BigDecimal("35.00")));
+        assertThat(categoryRepository.findById(categoryId).orElseThrow().getBalance())
+            .isEqualByComparingTo(categoryBalanceBefore.add(new BigDecimal("35.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_credit_reversesAccountBalance() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        Transaction existing = new Transaction(new BigDecimal("15.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.CREDIT, null, account, null, budget);
+        transactionRepository.save(existing);
+
+        BigDecimal accountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
+
+        mockMvc.perform(delete(URL + "/{id}", existing.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(accountRepository.findById(accountId).orElseThrow().getBalance())
+            .isEqualByComparingTo(accountBalanceBefore.subtract(new BigDecimal("15.00")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteTransaction_withoutAccountOrCategory_returns204() throws Exception {
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+
+        mockMvc.perform(delete(URL + "/{id}", existing.getId()))
+                .andExpect(status().isNoContent());
     }
 
     // ── Delete: Not found / access isolation ──────────────────────────────────

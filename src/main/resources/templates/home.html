@@ -92,7 +92,7 @@
                 </div>
 
                 <div class="account-list">
-                    <div class="account-item" th:each="account : ${accounts}">
+                    <div class="account-item" th:each="account : ${accounts}" th:attr="data-account-id=${account.id}">
                         <div class="account-icon"
                              th:classappend="${account.accountType.name() == 'SAVINGS'} ? 'savings-icon' : (${account.accountType.name() == 'CREDIT'} ? 'credit-icon' : '')">
                             <i th:class="${account.accountType.name() == 'SAVINGS'} ? 'fas fa-piggy-bank'
