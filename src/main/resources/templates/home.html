@@ -91,38 +91,7 @@
                     <button class="btn-icon" title="Add account" onclick="openAddAccountModal()"><i class="fas fa-plus-circle"></i></button>
                 </div>
 
-                <div class="account-list">
-                    <div class="account-item" th:each="account : ${accounts}">
-                        <div class="account-icon"
-                             th:classappend="${account.accountType.name() == 'SAVINGS'} ? 'savings-icon' : (${account.accountType.name() == 'CREDIT'} ? 'credit-icon' : '')">
-                            <i th:class="${account.accountType.name() == 'SAVINGS'} ? 'fas fa-piggy-bank'
-                                       : (${account.accountType.name() == 'CREDIT'}  ? 'fas fa-credit-card'
-                                       : (${account.accountType.name() == 'CASH'}    ? 'fas fa-money-bill-wave'
-                                       : 'fas fa-university'))"></i>
-                        </div>
-                        <div class="account-info">
-                            <span class="account-name" th:text="${account.name}">Checking</span>
-                            <span class="account-balance"
-                                  th:classappend="${account.balance < 0} ? 'negative' : ''"
-                                  th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
-                        </div>
-                        <button class="btn-icon account-edit-btn" title="Edit account"
-                                th:attr="data-id=${account.id},data-name=${account.name},data-type=${account.accountType.name()},data-balance=${account.balance}"
-                                onclick="openEditAccountModal(this)">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                    </div>
-                    <div th:if="${accounts == null or accounts.isEmpty()}" class="px-3 py-2"
-                         style="font-size:0.82rem; color: var(--text-muted); font-style: italic;">
-                        No accounts yet. Add one with <i class="fas fa-plus-circle"></i>.
-                    </div>
-                </div>
-
-                <div class="accounts-total">
-                    <span class="total-label">Net Worth</span>
-                    <span class="total-amount bree-serif"
-                          th:text="${'$' + #numbers.formatDecimal(netWorth ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
-                </div>
+                <th:block th:replace="~{fragments/accounts-sidebar :: accounts-sidebar}"></th:block>
             </div>
 
             <div class="sidebar-section sidebar-user-section">
@@ -1024,6 +993,26 @@
         .finally(function() {
             spinner.classList.add('d-none');
             icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
+
+    function deleteAccount(btn) {
+        if (!confirm('Delete this account? This cannot be undone.')) return;
+
+        var id = btn.getAttribute('data-id');
+        btn.disabled = true;
+
+        fetch('/accounts/' + id, {
+            method: 'DELETE'
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('Request failed: ' + response.status);
+            globalThis.location.reload();
+        })
+        .catch(function(err) {
+            console.error('Error deleting account:', err);
+            alert('Could not delete this account. It may have transactions linked to it or a non-zero balance.');
             btn.disabled = false;
         });
     }

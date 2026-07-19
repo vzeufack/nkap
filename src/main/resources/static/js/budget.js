@@ -107,9 +107,17 @@ $(document).ready(function () {
         navigateTo(getDateFromUrl());
     });
 
-    // Refresh fragment after a group/category is saved
+    // Refresh fragment after a group/category/transaction is saved
     document.addEventListener('nkap:groupSaved', function() {
         navigateTo(getPickerDate());
+
+        // Transactions can link/unlink an account, which changes whether it's
+        // eligible for deletion — keep the sidebar's delete buttons in sync.
+        htmx.ajax('GET', '/budgets/accounts-sidebar', {
+            target: '#accounts-sidebar-container',
+            swap:   'outerHTML',
+            headers: { 'HX-Request': 'true' }
+        });
     });
 
     // Keep the transaction modal's category dropdown and budget ID in sync with the budget fragment

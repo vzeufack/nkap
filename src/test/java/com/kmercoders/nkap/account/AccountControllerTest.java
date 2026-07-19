@@ -3,6 +3,12 @@ package com.kmercoders.nkap.account;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserRepository;
+import com.kmercoders.nkap.budget.Budget;
+import com.kmercoders.nkap.budget.BudgetRepository;
+import com.kmercoders.nkap.budget.BudgetService;
+import com.kmercoders.nkap.transaction.TransactionRepository;
+import com.kmercoders.nkap.transaction.TransactionRequest;
+import com.kmercoders.nkap.transaction.TransactionType;
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +21,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +42,9 @@ class AccountControllerTest {
     @Autowired private AppUserRepository appUserRepository;
     @Autowired private AccountRepository accountRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private BudgetRepository budgetRepository;
+    @Autowired private BudgetService budgetService;
+    @Autowired private TransactionRepository transactionRepository;
 
     private static final String EMAIL = "account_user@example.com";
     private static final String URL   = "/accounts";
@@ -47,6 +58,8 @@ class AccountControllerTest {
 
     @BeforeEach
     void setUp() {
+        transactionRepository.deleteAll();
+        budgetRepository.deleteAll();
         accountRepository.deleteAll();
     }
 
@@ -375,6 +388,88 @@ class AccountControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 request("Name", AccountType.CHECKING, BigDecimal.ZERO))))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
+
+    // ── Delete: Happy path ─────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteAccount_withZeroBalanceAndNoTransactions_returns204() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Empty", BigDecimal.ZERO, user));
+
+        mockMvc.perform(delete(URL + "/" + saved.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(accountRepository.findById(saved.getId())).isEmpty();
+    }
+
+    // ── Delete: Domain failures ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteAccount_withNonZeroBalance_returns400AndDoesNotDelete() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Funded", new BigDecimal("25.00"), user));
+
+        mockMvc.perform(delete(URL + "/" + saved.getId()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(accountRepository.findById(saved.getId())).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteAccount_withLinkedTransaction_returns400AndDoesNotDelete() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "InUse", BigDecimal.ZERO, user));
+        Budget budget = budgetService.createBudget(user, Month.JANUARY, 2025);
+
+        TransactionRequest txReq = new TransactionRequest();
+        txReq.setAmount(new BigDecimal("10.00"));
+        txReq.setTransactionDate(LocalDate.of(2025, 1, 15));
+        txReq.setTransactionType(TransactionType.DEBIT);
+        txReq.setAccountId(saved.getId());
+        txReq.setBudgetId(budget.getId());
+
+        mockMvc.perform(post("/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(txReq)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete(URL + "/" + saved.getId()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(accountRepository.findById(saved.getId())).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteAccount_withNonExistentId_returns404() throws Exception {
+        mockMvc.perform(delete(URL + "/999999"))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── Delete: Security ───────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void deleteAccount_cannotDeleteAnotherUsersAccount_returns404() throws Exception {
+        AppUser otherUser = new AppUser("other_delete@example.com", passwordEncoder.encode("pass"));
+        appUserRepository.save(otherUser);
+        Account otherAccount = accountRepository.save(
+                new Account(AccountType.CHECKING, "Other Account", BigDecimal.ZERO, otherUser));
+
+        mockMvc.perform(delete(URL + "/" + otherAccount.getId()))
+                .andExpect(status().isNotFound());
+
+        assertThat(accountRepository.findById(otherAccount.getId())).isPresent();
+    }
+
+    @Test
+    void deleteAccount_withoutAuthentication_returns401or302() throws Exception {
+        mockMvc.perform(delete(URL + "/1"))
                 .andExpect(status().is(anyOf(is(401), is(302))));
     }
 }

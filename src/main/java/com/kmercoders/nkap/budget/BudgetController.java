@@ -127,6 +127,12 @@ public class BudgetController {
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
     }
 
+    @GetMapping("/accounts-sidebar")
+    public String showAccountsSidebar(Model model) {
+        addAccountAttributes(model);
+        return "fragments/accounts-sidebar :: accounts-sidebar";
+    }
+
     private void addAccountAttributes(Model model) {
         List<AccountDTO> accounts = accountService.getAccountsForCurrentUser();
         BigDecimal netWorth = accounts.stream()
@@ -134,6 +140,7 @@ public class BudgetController {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         model.addAttribute("accounts", accounts);
         model.addAttribute("netWorth", netWorth);
+        model.addAttribute("accountIdsWithTransactions", accountService.getAccountIdsWithTransactionsForCurrentUser());
     }
 
     @PostMapping("/create/{month}/{year}")
