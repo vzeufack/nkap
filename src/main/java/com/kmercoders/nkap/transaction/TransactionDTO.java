@@ -8,6 +8,7 @@ public class TransactionDTO {
     private Long id;
     private BigDecimal amount;
     private LocalDate transactionDate;
+    private Direction direction;
     private TransactionType transactionType;
     private String description;
     private String note;
@@ -22,6 +23,7 @@ public class TransactionDTO {
         dto.id              = t.getId();
         dto.amount          = t.getAmount();
         dto.transactionDate = t.getTransactionDate();
+        dto.direction       = t.getDirection();
         dto.transactionType = t.getTransactionType();
         dto.description     = t.getDescription();
         dto.note            = t.getNote();
@@ -34,6 +36,7 @@ public class TransactionDTO {
     public Long getId()                        { return id; }
     public BigDecimal getAmount()              { return amount; }
     public LocalDate getTransactionDate()      { return transactionDate; }
+    public Direction getDirection()            { return direction; }
     public TransactionType getTransactionType(){ return transactionType; }
     public String getDescription()             { return description; }
     public String getNote()                    { return note; }

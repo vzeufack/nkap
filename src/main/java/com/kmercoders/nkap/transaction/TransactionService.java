@@ -59,7 +59,7 @@ public class TransactionService {
 
         Account oldAccount = transaction.getAccount();
         BudgetCategory oldBudgetCategory = transaction.getBudgetCategory();
-        BigDecimal oldSignedAmount = signedAmount(transaction.getAmount(), transaction.getTransactionType());
+        BigDecimal oldSignedAmount = signedAmount(transaction.getAmount(), transaction.getDirection());
 
         Account account = null;
         if (request.getAccountId() != null) {
@@ -92,11 +92,11 @@ public class TransactionService {
         }
 
         applyBalanceDelta(oldAccount, oldBudgetCategory, oldSignedAmount.negate());
-        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getTransactionType()));
+        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getDirection()));
 
         transaction.setAmount(request.getAmount());
         transaction.setTransactionDate(request.getTransactionDate());
-        transaction.setTransactionType(request.getTransactionType());
+        transaction.setDirection(request.getDirection());
         transaction.setDescription(request.getDescription());
         transaction.setNote(request.getNote());
         transaction.setAccount(account);
@@ -143,7 +143,8 @@ public class TransactionService {
         Transaction transaction = new Transaction(
             request.getAmount(),
             request.getTransactionDate(),
-            request.getTransactionType(),
+            request.getDirection(),
+            TransactionType.STANDARD,
             request.getNote(),
             account,
             budgetCategory,
@@ -151,7 +152,7 @@ public class TransactionService {
         );
         transaction.setDescription(request.getDescription());
 
-        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getTransactionType()));
+        applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getDirection()));
 
         return TransactionDTO.from(transactionRepository.save(transaction));
     }
@@ -163,14 +164,14 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
 
-        BigDecimal signedAmount = signedAmount(transaction.getAmount(), transaction.getTransactionType());
+        BigDecimal signedAmount = signedAmount(transaction.getAmount(), transaction.getDirection());
         applyBalanceDelta(transaction.getAccount(), transaction.getBudgetCategory(), signedAmount.negate());
 
         transactionRepository.delete(transaction);
     }
 
-    private BigDecimal signedAmount(BigDecimal amount, TransactionType type) {
-        return type == TransactionType.DEBIT ? amount.negate() : amount;
+    private BigDecimal signedAmount(BigDecimal amount, Direction direction) {
+        return direction == Direction.DEBIT ? amount.negate() : amount;
     }
 
     private void applyBalanceDelta(Account account, BudgetCategory budgetCategory, BigDecimal signedAmount) {

@@ -8,7 +8,7 @@ import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.budget.BudgetService;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionRequest;
-import com.kmercoders.nkap.transaction.TransactionType;
+import com.kmercoders.nkap.transaction.Direction;
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -429,7 +429,7 @@ class AccountControllerTest {
         TransactionRequest txReq = new TransactionRequest();
         txReq.setAmount(new BigDecimal("10.00"));
         txReq.setTransactionDate(LocalDate.of(2025, 1, 15));
-        txReq.setTransactionType(TransactionType.DEBIT);
+        txReq.setDirection(Direction.DEBIT);
         txReq.setAccountId(saved.getId());
         txReq.setBudgetId(budget.getId());
 

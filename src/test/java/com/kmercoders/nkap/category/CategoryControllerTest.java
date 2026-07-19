@@ -11,7 +11,7 @@ import com.kmercoders.nkap.group.GroupDTO;
 import com.kmercoders.nkap.group.GroupRepository;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionRequest;
-import com.kmercoders.nkap.transaction.TransactionType;
+import com.kmercoders.nkap.transaction.Direction;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -594,7 +594,7 @@ class CategoryControllerTest {
         TransactionRequest txReq = new TransactionRequest();
         txReq.setAmount(new BigDecimal("10.00"));
         txReq.setTransactionDate(LocalDate.of(2025, 1, 15));
-        txReq.setTransactionType(TransactionType.DEBIT);
+        txReq.setDirection(Direction.DEBIT);
         txReq.setCategoryId(categoryId);
         txReq.setBudgetId(budget.getId());
 

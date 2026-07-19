@@ -1,6 +1,7 @@
 package com.kmercoders.nkap.transaction;
 
 public enum TransactionType {
-    DEBIT,
-    CREDIT
+    STANDARD,
+    ADJUSTMENT,
+    TRANSFER
 }

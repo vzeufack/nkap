@@ -26,6 +26,10 @@ public class Transaction implements Serializable {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private Direction direction;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TransactionType transactionType;
 
     @Column(length = 100)
@@ -48,10 +52,11 @@ public class Transaction implements Serializable {
 
     protected Transaction() {}
 
-    public Transaction(BigDecimal amount, LocalDate transactionDate, TransactionType transactionType,
+    public Transaction(BigDecimal amount, LocalDate transactionDate, Direction direction, TransactionType transactionType,
                        String note, Account account, BudgetCategory budgetCategory, Budget budget) {
         this.amount          = amount;
         this.transactionDate = transactionDate;
+        this.direction       = direction;
         this.transactionType = transactionType;
         this.note            = note;
         this.account         = account;
@@ -66,6 +71,9 @@ public class Transaction implements Serializable {
 
     public LocalDate getTransactionDate()                          { return transactionDate; }
     public void setTransactionDate(LocalDate transactionDate)      { this.transactionDate = transactionDate; }
+
+    public Direction getDirection()                                { return direction; }
+    public void setDirection(Direction direction)                  { this.direction = direction; }
 
     public TransactionType getTransactionType()                    { return transactionType; }
     public void setTransactionType(TransactionType transactionType){ this.transactionType = transactionType; }

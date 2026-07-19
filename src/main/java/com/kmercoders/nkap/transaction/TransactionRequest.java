@@ -15,8 +15,8 @@ public class TransactionRequest {
     @NotNull(message = "Transaction date is required")
     private LocalDate transactionDate;
 
-    @NotNull(message = "Transaction type is required")
-    private TransactionType transactionType;
+    @NotNull(message = "Direction is required")
+    private Direction direction;
 
     @Size(max = 100, message = "Description must be 100 characters or fewer")
     private String description;
@@ -35,8 +35,8 @@ public class TransactionRequest {
     public void setAmount(BigDecimal amount)             { this.amount = amount; }
     public LocalDate getTransactionDate()                { return transactionDate; }
     public void setTransactionDate(LocalDate date)       { this.transactionDate = date; }
-    public TransactionType getTransactionType()          { return transactionType; }
-    public void setTransactionType(TransactionType type) { this.transactionType = type; }
+    public Direction getDirection()                      { return direction; }
+    public void setDirection(Direction direction)        { this.direction = direction; }
     public String getDescription()                        { return description; }
     public void setDescription(String description)        { this.description = description; }
     public String getNote()                              { return note; }

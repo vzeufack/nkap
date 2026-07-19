@@ -632,7 +632,7 @@
         var payload = {
             amount:          amount,
             transactionDate: dateInput.value,
-            transactionType: typeSelect.value,
+            direction:       typeSelect.value,
             description:     descriptionInput.value.trim() || null,
             note:            noteInput.value.trim() || null,
             accountId:       accountSelect  && accountSelect.value  ? Number.parseInt(accountSelect.value, 10)  : null,
@@ -755,7 +755,7 @@
         var payload = {
             amount:          amount,
             transactionDate: dateInput.value,
-            transactionType: typeSelect.value,
+            direction:       typeSelect.value,
             description:     descriptionInput.value.trim() || null,
             note:            noteInput.value.trim() || null,
             accountId:       accountSelect  && accountSelect.value  ? Number.parseInt(accountSelect.value, 10)  : null,

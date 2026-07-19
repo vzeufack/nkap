@@ -93,10 +93,10 @@ class TransactionControllerTest {
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
-    private TransactionRequest request(BigDecimal amount, TransactionType type, LocalDate date) {
+    private TransactionRequest request(BigDecimal amount, Direction type, LocalDate date) {
         TransactionRequest r = new TransactionRequest();
         r.setAmount(amount);
-        r.setTransactionType(type);
+        r.setDirection(type);
         r.setTransactionDate(date);
         return r;
     }
@@ -106,7 +106,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withAllFields_returns200AndCorrectPayload() throws Exception {
-        TransactionRequest req = request(new BigDecimal("49.99"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("49.99"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setDescription("Grocery run");
         req.setNote("Weekly groceries");
         req.setAccountId(accountId);
@@ -119,7 +119,7 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id",              notNullValue()))
                 .andExpect(jsonPath("$.amount",          is(49.99)))
-                .andExpect(jsonPath("$.transactionType", is("DEBIT")))
+                .andExpect(jsonPath("$.direction", is("DEBIT")))
                 .andExpect(jsonPath("$.transactionDate", is("2026-01-15")))
                 .andExpect(jsonPath("$.description",     is("Grocery run")))
                 .andExpect(jsonPath("$.note",            is("Weekly groceries")))
@@ -131,7 +131,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDescriptionOnly_returnsDescriptionInResponse() throws Exception {
-        TransactionRequest req = request(new BigDecimal("20.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 10));
+        TransactionRequest req = request(new BigDecimal("20.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 10));
         req.setDescription("Coffee shop");
         req.setBudgetId(budgetId);
 
@@ -146,7 +146,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withoutDescription_returnsNullDescription() throws Exception {
-        TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
+        TransactionRequest req = request(new BigDecimal("30.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
@@ -159,7 +159,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withMinimumFields_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("100.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 3));
+        TransactionRequest req = request(new BigDecimal("100.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 3));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
@@ -167,7 +167,7 @@ class TransactionControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id",              notNullValue()))
-                .andExpect(jsonPath("$.transactionType", is("CREDIT")))
+                .andExpect(jsonPath("$.direction", is("CREDIT")))
                 .andExpect(jsonPath("$.accountId",       nullValue()))
                 .andExpect(jsonPath("$.categoryId",      nullValue()))
                 .andExpect(jsonPath("$.budgetId",        is(budgetId.intValue())));
@@ -176,7 +176,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withoutAccount_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
+        TransactionRequest req = request(new BigDecimal("25.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
 
@@ -190,7 +190,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withZeroAmount_returns200() throws Exception {
-        TransactionRequest req = request(BigDecimal.ZERO, TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
+        TransactionRequest req = request(BigDecimal.ZERO, Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
         req.setNote("Free item with discount");
         req.setBudgetId(budgetId);
 
@@ -203,8 +203,8 @@ class TransactionControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void createTransaction_bothTransactionTypesAreAccepted() throws Exception {
-        for (TransactionType type : TransactionType.values()) {
+    void createTransaction_bothDirectionsAreAccepted() throws Exception {
+        for (Direction type : Direction.values()) {
             TransactionRequest req = request(new BigDecimal("10.00"), type, LocalDate.of(2026, Month.JANUARY, 12));
             req.setBudgetId(budgetId);
 
@@ -212,14 +212,14 @@ class TransactionControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.transactionType", is(type.name())));
+                    .andExpect(jsonPath("$.direction", is(type.name())));
         }
     }
 
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_persistsToDatabase() throws Exception {
-        TransactionRequest req = request(new BigDecimal("75.50"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 20));
+        TransactionRequest req = request(new BigDecimal("75.50"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 20));
         req.setNote("Utility bill");
         req.setAccountId(accountId);
         req.setBudgetId(budgetId);
@@ -232,14 +232,39 @@ class TransactionControllerTest {
         List<Transaction> saved = transactionRepository.findByAccountId(accountId);
         assertThat(saved).hasSize(1);
         assertThat(saved.get(0).getAmount()).isEqualByComparingTo("75.50");
-        assertThat(saved.get(0).getTransactionType()).isEqualTo(TransactionType.DEBIT);
+        assertThat(saved.get(0).getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(saved.get(0).getTransactionType()).isEqualTo(TransactionType.STANDARD);
         assertThat(saved.get(0).getNote()).isEqualTo("Utility bill");
     }
 
     @Test
     @WithMockUser(username = EMAIL)
+    void createTransaction_ignoresClientSuppliedTransactionType() throws Exception {
+        String payload = """
+            {
+              "amount": 20.00,
+              "transactionDate": "2026-01-15",
+              "direction": "DEBIT",
+              "budgetId": %d,
+              "transactionType": "ADJUSTMENT"
+            }
+            """.formatted(budgetId);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transactionType", is("STANDARD")));
+
+        List<Transaction> saved = transactionRepository.findByBudgetId(budgetId);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getTransactionType()).isEqualTo(TransactionType.STANDARD);
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
     void createTransaction_descriptionPersistedToDatabase() throws Exception {
-        TransactionRequest req = request(new BigDecimal("12.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("12.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setDescription("Bus ticket");
         req.setAccountId(accountId);
         req.setBudgetId(budgetId);
@@ -264,7 +289,7 @@ class TransactionControllerTest {
         Category category = categoryRepository.findById(categoryId).orElseThrow();
         BigDecimal categoryBalanceBefore = category.getBalance();
 
-        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("40.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setAccountId(accountId);
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
@@ -288,7 +313,7 @@ class TransactionControllerTest {
         Category category = categoryRepository.findById(categoryId).orElseThrow();
         BigDecimal categoryBalanceBefore = category.getBalance();
 
-        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("40.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setAccountId(accountId);
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
@@ -310,7 +335,7 @@ class TransactionControllerTest {
         Category category = categoryRepository.findById(categoryId).orElseThrow();
         BigDecimal categoryBalanceBefore = category.getBalance();
 
-        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("15.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
 
@@ -329,7 +354,7 @@ class TransactionControllerTest {
         Account account = accountRepository.findById(accountId).orElseThrow();
         BigDecimal accountBalanceBefore = account.getBalance();
 
-        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("15.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setAccountId(accountId);
         req.setBudgetId(budgetId);
 
@@ -347,7 +372,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNullAmount_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(null, TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(null, Direction.DEBIT, LocalDate.now());
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -359,7 +384,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNegativeAmount_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(new BigDecimal("-10.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("-10.00"), Direction.DEBIT, LocalDate.now());
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -371,7 +396,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNullTransactionDate_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, null);
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, null);
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -382,20 +407,20 @@ class TransactionControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void createTransaction_withNullTransactionType_returns400WithFieldError() throws Exception {
+    void createTransaction_withNullDirection_returns400WithFieldError() throws Exception {
         TransactionRequest req = request(new BigDecimal("50.00"), null, LocalDate.now());
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.transactionType", notNullValue()));
+                .andExpect(jsonPath("$.direction", notNullValue()));
     }
 
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNoteTooLong_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setNote("A".repeat(501));
 
         mockMvc.perform(post(URL)
@@ -408,7 +433,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDescriptionTooLong_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setDescription("A".repeat(101));
 
         mockMvc.perform(post(URL)
@@ -421,7 +446,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withBudgetAndCategory_persistsBudgetCategoryLink() throws Exception {
-        TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("30.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
 
@@ -441,7 +466,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNullBudgetId_returns400WithFieldError() throws Exception {
-        TransactionRequest req = request(new BigDecimal("15.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
+        TransactionRequest req = request(new BigDecimal("15.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
         req.setCategoryId(categoryId);
 
         mockMvc.perform(post(URL)
@@ -458,7 +483,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNonExistentAccount_returns404() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setAccountId(999999L);
         req.setBudgetId(budgetId);
 
@@ -476,7 +501,7 @@ class TransactionControllerTest {
         Account otherAccount = accountRepository.save(
             new Account(AccountType.SAVINGS, "Other Account", BigDecimal.ZERO, otherUser));
 
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setAccountId(otherAccount.getId());
         req.setBudgetId(budgetId);
 
@@ -489,7 +514,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNonExistentCategory_returns404() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 12));
         req.setCategoryId(999999L);
         req.setBudgetId(budgetId);
 
@@ -502,7 +527,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withNonExistentBudget_returns404() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setBudgetId(999999L);
 
         mockMvc.perform(post(URL)
@@ -517,7 +542,7 @@ class TransactionControllerTest {
         Group otherGroup = groupRepository.save(new Group("Other"));
         Category unlinkedCategory = categoryRepository.save(new Category("Unlinked", otherGroup));
 
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 15));
         req.setBudgetId(budgetId);
         req.setCategoryId(unlinkedCategory.getId());
 
@@ -534,7 +559,7 @@ class TransactionControllerTest {
         appUserRepository.save(otherUser);
         Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
 
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
         req.setBudgetId(otherBudget.getId());
 
         mockMvc.perform(post(URL)
@@ -548,7 +573,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDateInWrongMonth_returns400() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 1));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 1));
         req.setBudgetId(budgetId); // budget is JANUARY 2026
 
         mockMvc.perform(post(URL)
@@ -560,7 +585,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDateInWrongYear_returns400() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2025, Month.JANUARY, 15));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2025, Month.JANUARY, 15));
         req.setBudgetId(budgetId); // budget is JANUARY 2026
 
         mockMvc.perform(post(URL)
@@ -572,7 +597,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDateOnFirstDayOfBudgetMonth_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 1));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 1));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
@@ -584,7 +609,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void createTransaction_withDateOnLastDayOfBudgetMonth_returns200() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 31));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 31));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(post(URL)
@@ -597,7 +622,7 @@ class TransactionControllerTest {
 
     @Test
     void createTransaction_withoutAuthentication_returns401or302() throws Exception {
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.now());
 
         mockMvc.perform(post(URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -607,9 +632,9 @@ class TransactionControllerTest {
 
     // ── Update: Helpers ────────────────────────────────────────────────────────
 
-    private Transaction seedTransaction(BigDecimal amount, TransactionType type, LocalDate date) {
+    private Transaction seedTransaction(BigDecimal amount, Direction type, LocalDate date) {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
-        Transaction t = new Transaction(amount, date, type, null, null, null, budget);
+        Transaction t = new Transaction(amount, date, type, TransactionType.STANDARD, null, null, null, budget);
         return transactionRepository.save(t);
     }
 
@@ -618,9 +643,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withAllFields_returns200AndUpdatedPayload() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("99.99"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
+        TransactionRequest req = request(new BigDecimal("99.99"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 20));
         req.setDescription("Updated description");
         req.setNote("Updated note");
         req.setAccountId(accountId);
@@ -634,7 +659,7 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id",              is(existing.getId().intValue())))
                 .andExpect(jsonPath("$.amount",          is(99.99)))
-                .andExpect(jsonPath("$.transactionType", is("CREDIT")))
+                .andExpect(jsonPath("$.direction", is("CREDIT")))
                 .andExpect(jsonPath("$.transactionDate", is("2026-01-20")))
                 .andExpect(jsonPath("$.description",     is("Updated description")))
                 .andExpect(jsonPath("$.note",            is("Updated note")))
@@ -646,9 +671,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withMinimumFields_returns200() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 10));
+        Transaction existing = seedTransaction(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 10));
 
-        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 12));
+        TransactionRequest req = request(new BigDecimal("25.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 12));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -657,7 +682,7 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id",              is(existing.getId().intValue())))
                 .andExpect(jsonPath("$.amount",          is(25.00)))
-                .andExpect(jsonPath("$.transactionType", is("CREDIT")))
+                .andExpect(jsonPath("$.direction", is("CREDIT")))
                 .andExpect(jsonPath("$.accountId",       nullValue()))
                 .andExpect(jsonPath("$.categoryId",      nullValue()));
     }
@@ -665,9 +690,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_persistsChangesToDatabase() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 1));
+        Transaction existing = seedTransaction(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 1));
 
-        TransactionRequest req = request(new BigDecimal("123.45"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 28));
+        TransactionRequest req = request(new BigDecimal("123.45"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 28));
         req.setNote("Persisted note");
         req.setBudgetId(budgetId);
 
@@ -678,9 +703,30 @@ class TransactionControllerTest {
 
         Transaction updated = transactionRepository.findById(existing.getId()).orElseThrow();
         assertThat(updated.getAmount()).isEqualByComparingTo("123.45");
-        assertThat(updated.getTransactionType()).isEqualTo(TransactionType.CREDIT);
+        assertThat(updated.getDirection()).isEqualTo(Direction.CREDIT);
         assertThat(updated.getTransactionDate()).isEqualTo(LocalDate.of(2026, Month.JANUARY, 28));
         assertThat(updated.getNote()).isEqualTo("Persisted note");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateTransaction_doesNotChangeTransactionType() throws Exception {
+        Budget budget = budgetRepository.findById(budgetId).orElseThrow();
+        Transaction existing = transactionRepository.save(new Transaction(
+            new BigDecimal("50.00"), LocalDate.of(2026, Month.JANUARY, 1),
+            Direction.DEBIT, TransactionType.ADJUSTMENT, null, null, null, budget));
+
+        TransactionRequest req = request(new BigDecimal("75.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 15));
+        req.setBudgetId(budgetId);
+
+        mockMvc.perform(put(URL + "/{id}", existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transactionType", is("ADJUSTMENT")));
+
+        Transaction updated = transactionRepository.findById(existing.getId()).orElseThrow();
+        assertThat(updated.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
     }
 
     @Test
@@ -689,10 +735,10 @@ class TransactionControllerTest {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
         BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("40.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        Transaction existing = new Transaction(new BigDecimal("40.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, bc, budget);
         transactionRepository.save(existing);
 
-        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("40.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -706,9 +752,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_doesNotCreateDuplicate() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("20.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 7));
+        Transaction existing = seedTransaction(new BigDecimal("20.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 7));
 
-        TransactionRequest req = request(new BigDecimal("30.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 7));
+        TransactionRequest req = request(new BigDecimal("30.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 7));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -728,13 +774,13 @@ class TransactionControllerTest {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
         BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("30.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        Transaction existing = new Transaction(new BigDecimal("30.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, bc, budget);
         transactionRepository.save(existing);
 
         BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
         BigDecimal categoryBalanceBefore = categoryRepository.findById(categoryId).orElseThrow().getBalance();
 
-        TransactionRequest req = request(new BigDecimal("50.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("50.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setAccountId(accountId);
         req.setCategoryId(categoryId);
         req.setBudgetId(budgetId);
@@ -760,13 +806,13 @@ class TransactionControllerTest {
 
         Budget budget  = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("25.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, null, budget);
+        Transaction existing = new Transaction(new BigDecimal("25.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, null, budget);
         transactionRepository.save(existing);
 
         BigDecimal originalAccountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
         BigDecimal otherAccountBalanceBefore     = otherAccount.getBalance();
 
-        TransactionRequest req = request(new BigDecimal("25.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("25.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setAccountId(otherAccount.getId());
         req.setBudgetId(budgetId);
 
@@ -788,13 +834,13 @@ class TransactionControllerTest {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
         BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("40.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        Transaction existing = new Transaction(new BigDecimal("40.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, bc, budget);
         transactionRepository.save(existing);
 
         BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
         BigDecimal categoryBalanceBefore = categoryRepository.findById(categoryId).orElseThrow().getBalance();
 
-        TransactionRequest req = request(new BigDecimal("40.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("40.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -815,12 +861,12 @@ class TransactionControllerTest {
     void updateTransaction_changingTypeFromDebitToCredit_adjustsBalanceBothWays() throws Exception {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("20.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, null, budget);
+        Transaction existing = new Transaction(new BigDecimal("20.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, null, budget);
         transactionRepository.save(existing);
 
         BigDecimal accountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
 
-        TransactionRequest req = request(new BigDecimal("20.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("20.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setAccountId(accountId);
         req.setBudgetId(budgetId);
 
@@ -839,9 +885,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNullAmount_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(null, TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(null, Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -854,9 +900,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNegativeAmount_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("-5.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("-5.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -869,9 +915,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNullTransactionDate_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, null);
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, null);
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -883,8 +929,8 @@ class TransactionControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void updateTransaction_withNullTransactionType_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+    void updateTransaction_withNullDirection_returns400WithFieldError() throws Exception {
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         TransactionRequest req = request(new BigDecimal("10.00"), null, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
@@ -893,15 +939,15 @@ class TransactionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.transactionType", notNullValue()));
+                .andExpect(jsonPath("$.direction", notNullValue()));
     }
 
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withDescriptionTooLong_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setDescription("A".repeat(101));
         req.setBudgetId(budgetId);
 
@@ -915,9 +961,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNoteTooLong_returns400WithFieldError() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setNote("A".repeat(501));
         req.setBudgetId(budgetId);
 
@@ -933,9 +979,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withDateInWrongMonth_returns400() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 1));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.FEBRUARY, 1));
         req.setBudgetId(budgetId); // budget is JANUARY 2026
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -947,9 +993,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withDateInWrongYear_returns400() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2025, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2025, Month.JANUARY, 5));
         req.setBudgetId(budgetId); // budget is JANUARY 2026
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -963,7 +1009,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNonExistentId_returns404() throws Exception {
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", 999999L)
@@ -978,10 +1024,10 @@ class TransactionControllerTest {
         AppUser otherUser = new AppUser("other_update_tx@example.com", passwordEncoder.encode("pass"));
         appUserRepository.save(otherUser);
         Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
-        Transaction otherTx = new Transaction(new BigDecimal("10.00"), LocalDate.of(2026, Month.MARCH, 1), TransactionType.DEBIT, null, null, null, otherBudget);
+        Transaction otherTx = new Transaction(new BigDecimal("10.00"), LocalDate.of(2026, Month.MARCH, 1), Direction.DEBIT, TransactionType.STANDARD, null, null, null, otherBudget);
         transactionRepository.save(otherTx);
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", otherTx.getId())
@@ -993,9 +1039,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNonExistentAccount_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setAccountId(999999L);
         req.setBudgetId(budgetId);
 
@@ -1008,14 +1054,14 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withAnotherUsersAccount_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         AppUser otherUser = new AppUser("other_acc_update@example.com", passwordEncoder.encode("pass"));
         appUserRepository.save(otherUser);
         Account otherAccount = accountRepository.save(
             new Account(AccountType.SAVINGS, "Their Account", BigDecimal.ZERO, otherUser));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setAccountId(otherAccount.getId());
         req.setBudgetId(budgetId);
 
@@ -1028,9 +1074,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNonExistentBudget_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.now());
         req.setBudgetId(999999L);
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -1042,13 +1088,13 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withAnotherUsersBudget_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         AppUser otherUser = new AppUser("other_bud_update@example.com", passwordEncoder.encode("pass"));
         appUserRepository.save(otherUser);
         Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.now());
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.now());
         req.setBudgetId(otherBudget.getId());
 
         mockMvc.perform(put(URL + "/{id}", existing.getId())
@@ -1060,9 +1106,9 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withNonExistentCategory_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setCategoryId(999999L);
         req.setBudgetId(budgetId);
 
@@ -1075,12 +1121,12 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void updateTransaction_withCategoryNotLinkedToBudget_returns404() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         Group otherGroup = groupRepository.save(new Group("Other"));
         Category unlinked = categoryRepository.save(new Category("Unlinked", otherGroup));
 
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setCategoryId(unlinked.getId());
         req.setBudgetId(budgetId);
 
@@ -1094,7 +1140,7 @@ class TransactionControllerTest {
 
     @Test
     void updateTransaction_withoutAuthentication_returns401or302() throws Exception {
-        TransactionRequest req = request(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        TransactionRequest req = request(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
         req.setBudgetId(budgetId);
 
         mockMvc.perform(put(URL + "/{id}", 1L)
@@ -1108,7 +1154,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void deleteTransaction_withExistingId_returns204() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         mockMvc.perform(delete(URL + "/{id}", existing.getId()))
                 .andExpect(status().isNoContent());
@@ -1117,7 +1163,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void deleteTransaction_removesFromDatabase() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         mockMvc.perform(delete(URL + "/{id}", existing.getId()))
                 .andExpect(status().isNoContent());
@@ -1128,8 +1174,8 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void deleteTransaction_doesNotAffectOtherTransactions() throws Exception {
-        Transaction toDelete = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
-        Transaction toKeep   = seedTransaction(new BigDecimal("20.00"), TransactionType.CREDIT, LocalDate.of(2026, Month.JANUARY, 6));
+        Transaction toDelete = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction toKeep   = seedTransaction(new BigDecimal("20.00"), Direction.CREDIT, LocalDate.of(2026, Month.JANUARY, 6));
 
         mockMvc.perform(delete(URL + "/{id}", toDelete.getId()))
                 .andExpect(status().isNoContent());
@@ -1145,7 +1191,7 @@ class TransactionControllerTest {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
         BudgetCategory bc = budgetCategoryRepository.findByBudgetIdAndCategoryId(budgetId, categoryId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("35.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.DEBIT, null, account, bc, budget);
+        Transaction existing = new Transaction(new BigDecimal("35.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.DEBIT, TransactionType.STANDARD, null, account, bc, budget);
         transactionRepository.save(existing);
 
         BigDecimal accountBalanceBefore  = accountRepository.findById(accountId).orElseThrow().getBalance();
@@ -1165,7 +1211,7 @@ class TransactionControllerTest {
     void deleteTransaction_credit_reversesAccountBalance() throws Exception {
         Budget budget = budgetRepository.findById(budgetId).orElseThrow();
         Account account = accountRepository.findById(accountId).orElseThrow();
-        Transaction existing = new Transaction(new BigDecimal("15.00"), LocalDate.of(2026, Month.JANUARY, 5), TransactionType.CREDIT, null, account, null, budget);
+        Transaction existing = new Transaction(new BigDecimal("15.00"), LocalDate.of(2026, Month.JANUARY, 5), Direction.CREDIT, TransactionType.STANDARD, null, account, null, budget);
         transactionRepository.save(existing);
 
         BigDecimal accountBalanceBefore = accountRepository.findById(accountId).orElseThrow().getBalance();
@@ -1180,7 +1226,7 @@ class TransactionControllerTest {
     @Test
     @WithMockUser(username = EMAIL)
     void deleteTransaction_withoutAccountOrCategory_returns204() throws Exception {
-        Transaction existing = seedTransaction(new BigDecimal("10.00"), TransactionType.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
+        Transaction existing = seedTransaction(new BigDecimal("10.00"), Direction.DEBIT, LocalDate.of(2026, Month.JANUARY, 5));
 
         mockMvc.perform(delete(URL + "/{id}", existing.getId()))
                 .andExpect(status().isNoContent());
@@ -1201,7 +1247,7 @@ class TransactionControllerTest {
         AppUser otherUser = new AppUser("other_delete_tx@example.com", passwordEncoder.encode("pass"));
         appUserRepository.save(otherUser);
         Budget otherBudget = budgetRepository.save(new Budget(Month.MARCH, 2026, otherUser));
-        Transaction otherTx = new Transaction(new BigDecimal("10.00"), LocalDate.of(2026, Month.MARCH, 1), TransactionType.DEBIT, null, null, null, otherBudget);
+        Transaction otherTx = new Transaction(new BigDecimal("10.00"), LocalDate.of(2026, Month.MARCH, 1), Direction.DEBIT, TransactionType.STANDARD, null, null, null, otherBudget);
         transactionRepository.save(otherTx);
 
         mockMvc.perform(delete(URL + "/{id}", otherTx.getId()))

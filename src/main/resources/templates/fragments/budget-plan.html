@@ -213,15 +213,15 @@
                                   th:text="${tx.categoryName ?: '—'}">Category</span>
                         </div>
                         <span class="tx-row-amount"
-                              th:classappend="${tx.transactionType.name() == 'CREDIT'} ? 'credit' : 'debit'"
-                              th:text="${(tx.transactionType.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                              th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
+                              th:text="${(tx.direction.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
                             $0.00
                         </span>
                         <button type="button" class="tx-edit-btn" title="Edit transaction"
                                 onclick="openEditTransactionModal(this)"
                                 th:attr="data-id=${tx.id},
                                          data-amount=${tx.amount},
-                                         data-type=${tx.transactionType.name()},
+                                         data-type=${tx.direction.name()},
                                          data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
                                          data-description=${tx.description},
                                          data-note=${tx.note},
