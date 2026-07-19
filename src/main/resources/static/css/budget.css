@@ -374,6 +374,40 @@ html, body {
     opacity: 1;
 }
 
+.account-delete-btn {
+    opacity: 0;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.account-item:hover .account-delete-btn {
+    opacity: 1;
+}
+
+.account-delete-btn:hover:not(:disabled) {
+    color: var(--nkap-red);
+    transform: scale(1.15);
+}
+
+.account-delete-btn:disabled {
+    cursor: not-allowed;
+    color: var(--text-muted);
+    opacity: 0.35;
+}
+
+/* Wrapper needed so the tooltip still shows on hover — disabled buttons
+   don't receive mouse events, so the title must live on the parent span. */
+.account-delete-tooltip-wrap {
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.account-item:hover .account-delete-tooltip-wrap .account-delete-btn {
+    opacity: 0.35;
+}
+
 .accounts-total {
     display: flex;
     justify-content: space-between;

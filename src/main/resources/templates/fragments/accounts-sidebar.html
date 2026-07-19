@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<body>
+    <div id="accounts-sidebar-container" th:fragment="accounts-sidebar">
+        <div class="account-list">
+            <div class="account-item" th:each="account : ${accounts}"
+                 th:with="hasTransactions=${accountIdsWithTransactions != null and accountIdsWithTransactions.contains(account.id)},
+                          hasBalance=${account.balance != 0}">
+                <div class="account-icon"
+                     th:classappend="${account.accountType.name() == 'SAVINGS'} ? 'savings-icon' : (${account.accountType.name() == 'CREDIT'} ? 'credit-icon' : '')">
+                    <i th:class="${account.accountType.name() == 'SAVINGS'} ? 'fas fa-piggy-bank'
+                               : (${account.accountType.name() == 'CREDIT'}  ? 'fas fa-credit-card'
+                               : (${account.accountType.name() == 'CASH'}    ? 'fas fa-money-bill-wave'
+                               : 'fas fa-university'))"></i>
+                </div>
+                <div class="account-info">
+                    <span class="account-name" th:text="${account.name}">Checking</span>
+                    <span class="account-balance"
+                          th:classappend="${account.balance < 0} ? 'negative' : ''"
+                          th:text="${'$' + #numbers.formatDecimal(account.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                </div>
+                <button class="btn-icon account-edit-btn" title="Edit account"
+                        th:attr="data-id=${account.id},data-name=${account.name},data-type=${account.accountType.name()},data-balance=${account.balance}"
+                        onclick="openEditAccountModal(this)">
+                    <i class="fas fa-pen"></i>
+                </button>
+                <span class="account-delete-tooltip-wrap"
+                      th:if="${hasTransactions or hasBalance}"
+                      th:title="${(hasTransactions and hasBalance) ? 'Cannot delete: account has transactions and a non-zero balance' : (hasTransactions ? 'Cannot delete: account has transactions linked to it' : 'Cannot delete: balance must be $0.00')}">
+                    <button class="btn-icon account-delete-btn" disabled="disabled">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </span>
+                <button class="btn-icon account-delete-btn"
+                        th:unless="${hasTransactions or hasBalance}"
+                        th:attr="data-id=${account.id}"
+                        title="Delete account"
+                        onclick="deleteAccount(this)">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+            <div th:if="${accounts == null or accounts.isEmpty()}" class="px-3 py-2"
+                 style="font-size:0.82rem; color: var(--text-muted); font-style: italic;">
+                No accounts yet. Add one with <i class="fas fa-plus-circle"></i>.
+            </div>
+        </div>
+
+        <div class="accounts-total">
+            <span class="total-label">Net Worth</span>
+            <span class="total-amount bree-serif"
+                  th:text="${'$' + #numbers.formatDecimal(netWorth ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+        </div>
+    </div>
+</body>
+</html>

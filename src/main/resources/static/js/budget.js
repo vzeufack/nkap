@@ -107,45 +107,18 @@ $(document).ready(function () {
         navigateTo(getDateFromUrl());
     });
 
-    // Refresh fragment after a group/category is saved
+    // Refresh fragment after a group/category/transaction is saved
     document.addEventListener('nkap:groupSaved', function() {
         navigateTo(getPickerDate());
-        refreshAccountBalances();
+
+        // Transactions can link/unlink an account, which changes whether it's
+        // eligible for deletion — keep the sidebar's delete buttons in sync.
+        htmx.ajax('GET', '/budgets/accounts-sidebar', {
+            target: '#accounts-sidebar-container',
+            swap:   'outerHTML',
+            headers: { 'HX-Request': 'true' }
+        });
     });
-
-    // Transactions can change account balances, but the accounts sidebar lives
-    // outside #budget-plan-container, so htmx's fragment swap never touches it.
-    function refreshAccountBalances() {
-        fetch('/accounts')
-            .then(function(response) { return response.ok ? response.json() : Promise.reject(response); })
-            .then(function(accounts) {
-                var netWorth = 0;
-
-                accounts.forEach(function(account) {
-                    netWorth += account.balance;
-
-                    var item = document.querySelector('.account-item[data-account-id="' + account.id + '"]');
-                    if (!item) return;
-
-                    var balanceEl = item.querySelector('.account-balance');
-                    if (balanceEl) {
-                        balanceEl.textContent = formatCurrency(account.balance);
-                        balanceEl.classList.toggle('negative', account.balance < 0);
-                    }
-
-                    var editBtn = item.querySelector('.account-edit-btn');
-                    if (editBtn) editBtn.dataset.balance = account.balance;
-                });
-
-                var totalEl = document.querySelector('.accounts-total .total-amount');
-                if (totalEl) totalEl.textContent = formatCurrency(netWorth);
-            })
-            .catch(function(err) { console.error('Error refreshing account balances:', err); });
-    }
-
-    function formatCurrency(amount) {
-        return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
 
     // Keep the transaction modal's category dropdown and budget ID in sync with the budget fragment
     document.addEventListener('htmx:afterSettle', function() {
