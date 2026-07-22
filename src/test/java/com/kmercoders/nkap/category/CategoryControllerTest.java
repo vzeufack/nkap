@@ -9,8 +9,10 @@ import com.kmercoders.nkap.budget.BudgetService;
 import com.kmercoders.nkap.group.Group;
 import com.kmercoders.nkap.group.GroupDTO;
 import com.kmercoders.nkap.group.GroupRepository;
+import com.kmercoders.nkap.transaction.Transaction;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionRequest;
+import com.kmercoders.nkap.transaction.TransactionType;
 import com.kmercoders.nkap.transaction.Direction;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -289,6 +292,69 @@ class CategoryControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ── Create: Adjustment transaction ────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createCategory_withPositiveBalance_createsCreditAdjustmentTransaction() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+
+        BudgetCategory bc = budgetCategoryRepository
+                .findByBudgetIdAndCategoryId(budget.getId(), categoryId).orElseThrow();
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getBudgetCategory().getId()).isEqualTo(bc.getId());
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.CREDIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("50.00");
+        assertThat(adjustment.getAccount()).isNull();
+        assertThat(adjustment.getDescription()).isNotBlank();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createCategory_withNegativeBalance_createsDebitAdjustmentTransaction() throws Exception {
+        createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("-5.00"));
+
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("5.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createCategory_withZeroBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        assertThat(transactionRepository.findByBudgetId(budget.getId())).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createCategory_withNullBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        createCategoryAndGetId("Meat", new BigDecimal("150.00"), null);
+
+        assertThat(transactionRepository.findByBudgetId(budget.getId())).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createCategory_adjustmentTransactionDate_fallsWithinBudgetMonth() throws Exception {
+        // budget is January 2025, which is in the past relative to "today" in this test run,
+        // so the adjustment transaction should be dated the last day of the budget month.
+        createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        assertThat(transactions).hasSize(1);
+        assertThat(transactions.get(0).getTransactionDate()).isEqualTo(LocalDate.of(2025, 1, 31));
+    }
+
     // ── Security ───────────────────────────────────────────────────────────────
 
     @Test
@@ -358,7 +424,7 @@ class CategoryControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
-    void updateCategory_withNullBalance_doesNotChangeExistingBalance() throws Exception {
+    void updateCategory_withNullBalance_treatsBalanceAsZero() throws Exception {
         CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
         String response = mockMvc.perform(post(url())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -374,12 +440,12 @@ class CategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.balance", is(50.00)));
+                .andExpect(jsonPath("$.balance", is(0.00)));
     }
 
     @Test
     @WithMockUser(username = EMAIL)
-    void updateCategory_withNullAllocation_doesNotChangeExistingAllocation() throws Exception {
+    void updateCategory_withNullAllocation_treatsAllocationAsZero() throws Exception {
         CategoryRequest createReq = request("Meat", new BigDecimal("150.00"), null);
         String response = mockMvc.perform(post(url())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -395,7 +461,109 @@ class CategoryControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateReq)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.allocation", is(150.00)));
+                .andExpect(jsonPath("$.allocation", is(0)));
+    }
+
+    // ── Update: Adjustment transaction ────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_increasingBalance_createsCreditAdjustmentTransactionForDelta() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("75.00"));
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(75.00)));
+
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.CREDIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("75.00");
+        assertThat(adjustment.getDescription()).isNotBlank();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_decreasingBalance_createsDebitAdjustmentTransactionForDelta() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("100.00"));
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("40.00"));
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(40.00)));
+
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        // one from the non-zero initial balance at creation, one from this update
+        assertThat(transactions).hasSize(2);
+
+        Transaction updateAdjustment = transactions.stream()
+                .max(Comparator.comparing(Transaction::getId))
+                .orElseThrow();
+        assertThat(updateAdjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(updateAdjustment.getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(updateAdjustment.getAmount()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withUnchangedBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk());
+
+        // only the adjustment transaction created at category creation time
+        assertThat(transactionRepository.findByBudgetId(budget.getId())).hasSize(1);
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNullBalance_treatsBalanceAsZeroAndCreatesDebitAdjustmentTransaction() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), new BigDecimal("50.00"));
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("150.00"), null);
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(0.00)));
+
+        List<Transaction> transactions = transactionRepository.findByBudgetId(budget.getId());
+        // one from the non-zero initial balance at creation, one from this update
+        assertThat(transactions).hasSize(2);
+
+        Transaction updateAdjustment = transactions.stream()
+                .max(Comparator.comparing(Transaction::getId))
+                .orElseThrow();
+        assertThat(updateAdjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(updateAdjustment.getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(updateAdjustment.getAmount()).isEqualByComparingTo("50.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateCategory_withNullBalanceAndAlreadyZeroBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        Long categoryId = createCategoryAndGetId("Meat", new BigDecimal("150.00"), BigDecimal.ZERO);
+
+        CategoryRequest updateReq = request("Meat", new BigDecimal("150.00"), null);
+        mockMvc.perform(put(url(categoryId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(0.00)));
+
+        assertThat(transactionRepository.findByBudgetId(budget.getId())).isEmpty();
     }
 
     // ── Update: Validation failures ────────────────────────────────────────────

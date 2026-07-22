@@ -7,6 +7,7 @@ import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.group.Group;
 import com.kmercoders.nkap.group.GroupRepository;
 import com.kmercoders.nkap.transaction.TransactionRepository;
+import com.kmercoders.nkap.transaction.TransactionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class CategoryService {
     private final BudgetRepository budgetRepository;
     private final GroupRepository groupRepository;
     private final TransactionRepository transactionRepository;
+    private final TransactionService transactionService;
     private final AppUserService appUserService;
 
     public CategoryService(CategoryRepository categoryRepository,
@@ -30,12 +32,14 @@ public class CategoryService {
                            BudgetRepository budgetRepository,
                            GroupRepository groupRepository,
                            TransactionRepository transactionRepository,
+                           TransactionService transactionService,
                            AppUserService appUserService) {
         this.categoryRepository       = categoryRepository;
         this.budgetCategoryRepository = budgetCategoryRepository;
         this.budgetRepository         = budgetRepository;
         this.groupRepository          = groupRepository;
         this.transactionRepository    = transactionRepository;
+        this.transactionService       = transactionService;
         this.appUserService           = appUserService;
     }
 
@@ -56,7 +60,6 @@ public class CategoryService {
             : BigDecimal.ZERO;
 
         Category category = new Category(request.getName(), group);
-        category.setBalance(initialBalance);
         categoryRepository.save(category);
 
         BigDecimal initialAllocation = request.getAllocation() != null
@@ -65,6 +68,11 @@ public class CategoryService {
 
         BudgetCategory budgetCategory = new BudgetCategory(budget, category, initialAllocation);
         budgetCategoryRepository.save(budgetCategory);
+
+        if (initialBalance.compareTo(BigDecimal.ZERO) != 0) {
+            transactionService.createAdjustmentTransaction(
+                budget, budgetCategory, initialBalance, "Initial balance adjustment for new category");
+        }
 
         return CategoryDTO.from(budgetCategory);
     }
@@ -86,11 +94,16 @@ public class CategoryService {
 
         BigDecimal updatedAllocation = request.getAllocation() != null
             ? request.getAllocation()
-            : bc.getAllocation();
+            : BigDecimal.ZERO;
         bc.setAllocation(updatedAllocation);
 
-        if (request.getBalance() != null) {
-            bc.getCategory().setBalance(request.getBalance());
+        BigDecimal updatedBalance = request.getBalance() != null
+            ? request.getBalance()
+            : BigDecimal.ZERO;
+        BigDecimal delta = updatedBalance.subtract(bc.getCategory().getBalance());
+        if (delta.compareTo(BigDecimal.ZERO) != 0) {
+            transactionService.createAdjustmentTransaction(
+                bc.getBudget(), bc, delta, "Balance adjustment for category update");
         }
 
         return CategoryDTO.from(bc);

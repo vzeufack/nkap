@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -155,6 +157,38 @@ public class TransactionService {
         applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getDirection()));
 
         return TransactionDTO.from(transactionRepository.save(transaction));
+    }
+
+    @Transactional
+    public void createAdjustmentTransaction(Budget budget, BudgetCategory budgetCategory, BigDecimal amount, String description) {
+        Direction direction = amount.signum() < 0 ? Direction.DEBIT : Direction.CREDIT;
+
+        Transaction transaction = new Transaction(
+            amount.abs(),
+            adjustmentTransactionDate(budget),
+            direction,
+            TransactionType.ADJUSTMENT,
+            null,
+            null,
+            budgetCategory,
+            budget
+        );
+        transaction.setDescription(description);
+
+        applyBalanceDelta(null, budgetCategory, amount);
+
+        transactionRepository.save(transaction);
+    }
+
+    private LocalDate adjustmentTransactionDate(Budget budget) {
+        LocalDate today = LocalDate.now();
+        YearMonth budgetMonth = YearMonth.of(budget.getYear(), budget.getMonth());
+        YearMonth currentMonth = YearMonth.from(today);
+
+        if (budgetMonth.equals(currentMonth)) {
+            return today;
+        }
+        return budgetMonth.isAfter(currentMonth) ? budgetMonth.atDay(1) : budgetMonth.atEndOfMonth();
     }
 
     @Transactional
