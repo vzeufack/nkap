@@ -6,8 +6,10 @@ import com.kmercoders.nkap.appuser.AppUserRepository;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.budget.BudgetService;
+import com.kmercoders.nkap.transaction.Transaction;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionRequest;
+import com.kmercoders.nkap.transaction.TransactionType;
 import com.kmercoders.nkap.transaction.Direction;
 
 import org.junit.jupiter.api.*;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,6 +52,8 @@ class AccountControllerTest {
     private static final String EMAIL = "account_user@example.com";
     private static final String URL   = "/accounts";
 
+    private Budget budget;
+
     @BeforeAll
     void createUser() {
         appUserRepository.deleteAll();
@@ -61,6 +66,10 @@ class AccountControllerTest {
         transactionRepository.deleteAll();
         budgetRepository.deleteAll();
         accountRepository.deleteAll();
+
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        LocalDate today = LocalDate.now();
+        budget = budgetService.createBudget(user, today.getMonth(), today.getYear());
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -71,6 +80,16 @@ class AccountControllerTest {
         r.setAccountType(type);
         r.setBalance(balance);
         return r;
+    }
+
+    private Long createAccountAndGetId(String name, AccountType type, BigDecimal balance) throws Exception {
+        String response = mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request(name, type, balance))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return objectMapper.readTree(response).get("id").asLong();
     }
 
     // ── Create: Happy path ─────────────────────────────────────────────────────
@@ -194,6 +213,77 @@ class AccountControllerTest {
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.balance", notNullValue()));
+    }
+
+    // ── Create: Adjustment transaction ────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withPositiveBalance_createsCreditAdjustmentTransaction() throws Exception {
+        Long accountId = createAccountAndGetId("Main Checking", AccountType.CHECKING, new BigDecimal("1500.00"));
+
+        List<Transaction> transactions = transactionRepository.findByAccountId(accountId);
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.CREDIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("1500.00");
+        assertThat(adjustment.getBudgetCategory()).isNull();
+        assertThat(adjustment.getBudget().getId()).isEqualTo(budget.getId());
+        assertThat(adjustment.getDescription()).isNotBlank();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withNegativeBalance_createsDebitAdjustmentTransaction() throws Exception {
+        Long accountId = createAccountAndGetId("Credit Card", AccountType.CREDIT, new BigDecimal("-250.00"));
+
+        List<Transaction> transactions = transactionRepository.findByAccountId(accountId);
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("250.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withZeroBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        Long accountId = createAccountAndGetId("Cash Wallet", AccountType.CASH, BigDecimal.ZERO);
+
+        assertThat(transactionRepository.findByAccountId(accountId)).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withNonZeroBalanceAndNoCurrentMonthBudget_usesLatestBudget() throws Exception {
+        budgetRepository.delete(budget);
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Budget lastMonthBudget = budgetService.createBudget(user, LocalDate.now().minusMonths(1).getMonth(),
+                LocalDate.now().minusMonths(1).getYear());
+
+        Long accountId = createAccountAndGetId("Main Checking", AccountType.CHECKING, new BigDecimal("300.00"));
+
+        List<Transaction> transactions = transactionRepository.findByAccountId(accountId);
+        assertThat(transactions).hasSize(1);
+        assertThat(transactions.get(0).getBudget().getId()).isEqualTo(lastMonthBudget.getId());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withNonZeroBalanceAndNoBudgetAtAll_returns400() throws Exception {
+        budgetRepository.delete(budget);
+
+        AccountRequest req = request("Main Checking", AccountType.CHECKING, new BigDecimal("300.00"));
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(accountRepository.findByAppUser(appUserRepository.findByEmail(EMAIL).orElseThrow())).isEmpty();
     }
 
     // ── List: Happy path ───────────────────────────────────────────────────────
@@ -380,6 +470,85 @@ class AccountControllerTest {
                 .andExpect(jsonPath("$.balance", notNullValue()));
     }
 
+    // ── Update: Adjustment transaction ────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_increasingBalance_createsCreditAdjustmentTransactionForDelta() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Checking", new BigDecimal("100.00"), user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Checking", AccountType.CHECKING, new BigDecimal("175.00")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(175.00)));
+
+        List<Transaction> transactions = transactionRepository.findByAccountId(saved.getId());
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.CREDIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("75.00");
+        assertThat(adjustment.getDescription()).isNotBlank();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_decreasingBalance_createsDebitAdjustmentTransactionForDelta() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Checking", new BigDecimal("100.00"), user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Checking", AccountType.CHECKING, new BigDecimal("40.00")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.balance", is(40.00)));
+
+        List<Transaction> transactions = transactionRepository.findByAccountId(saved.getId());
+        assertThat(transactions).hasSize(1);
+
+        Transaction adjustment = transactions.get(0);
+        assertThat(adjustment.getTransactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(adjustment.getDirection()).isEqualTo(Direction.DEBIT);
+        assertThat(adjustment.getAmount()).isEqualByComparingTo("60.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withUnchangedBalance_doesNotCreateAdjustmentTransaction() throws Exception {
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Checking", new BigDecimal("100.00"), user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Checking", AccountType.CHECKING, new BigDecimal("100.00")))))
+                .andExpect(status().isOk());
+
+        assertThat(transactionRepository.findByAccountId(saved.getId())).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateAccount_withNonZeroDeltaAndNoBudgetAtAll_returns400AndDoesNotChangeBalance() throws Exception {
+        budgetRepository.delete(budget);
+        AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
+        Account saved = accountRepository.save(new Account(AccountType.CHECKING, "Checking", new BigDecimal("100.00"), user));
+
+        mockMvc.perform(put(URL + "/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                request("Checking", AccountType.CHECKING, new BigDecimal("175.00")))))
+                .andExpect(status().isBadRequest());
+
+        assertThat(accountRepository.findById(saved.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("100.00");
+    }
+
     // ── Update: Security ───────────────────────────────────────────────────────
 
     @Test
@@ -424,14 +593,14 @@ class AccountControllerTest {
     void deleteAccount_withLinkedTransaction_returns400AndDoesNotDelete() throws Exception {
         AppUser user = appUserRepository.findByEmail(EMAIL).orElseThrow();
         Account saved = accountRepository.save(new Account(AccountType.CHECKING, "InUse", BigDecimal.ZERO, user));
-        Budget budget = budgetService.createBudget(user, Month.JANUARY, 2025);
+        Budget txBudget = budgetService.createBudget(user, Month.JANUARY, 2025);
 
         TransactionRequest txReq = new TransactionRequest();
         txReq.setAmount(new BigDecimal("10.00"));
         txReq.setTransactionDate(LocalDate.of(2025, 1, 15));
         txReq.setDirection(Direction.DEBIT);
         txReq.setAccountId(saved.getId());
-        txReq.setBudgetId(budget.getId());
+        txReq.setBudgetId(txBudget.getId());
 
         mockMvc.perform(post("/transactions")
                         .contentType(MediaType.APPLICATION_JSON)

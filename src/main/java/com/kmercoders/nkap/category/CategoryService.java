@@ -71,7 +71,7 @@ public class CategoryService {
 
         if (initialBalance.compareTo(BigDecimal.ZERO) != 0) {
             transactionService.createAdjustmentTransaction(
-                budget, budgetCategory, initialBalance, "Initial balance adjustment for new category");
+                budget, null, budgetCategory, initialBalance, "Initial balance adjustment for new category");
         }
 
         return CategoryDTO.from(budgetCategory);
@@ -103,7 +103,7 @@ public class CategoryService {
         BigDecimal delta = updatedBalance.subtract(bc.getCategory().getBalance());
         if (delta.compareTo(BigDecimal.ZERO) != 0) {
             transactionService.createAdjustmentTransaction(
-                bc.getBudget(), bc, delta, "Balance adjustment for category update");
+                bc.getBudget(), null, bc, delta, "Balance adjustment for category update");
         }
 
         return CategoryDTO.from(bc);

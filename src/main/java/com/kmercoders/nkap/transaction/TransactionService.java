@@ -160,7 +160,7 @@ public class TransactionService {
     }
 
     @Transactional
-    public void createAdjustmentTransaction(Budget budget, BudgetCategory budgetCategory, BigDecimal amount, String description) {
+    public void createAdjustmentTransaction(Budget budget, Account account, BudgetCategory budgetCategory, BigDecimal amount, String description) {
         Direction direction = amount.signum() < 0 ? Direction.DEBIT : Direction.CREDIT;
 
         Transaction transaction = new Transaction(
@@ -169,13 +169,13 @@ public class TransactionService {
             direction,
             TransactionType.ADJUSTMENT,
             null,
-            null,
+            account,
             budgetCategory,
             budget
         );
         transaction.setDescription(description);
 
-        applyBalanceDelta(null, budgetCategory, amount);
+        applyBalanceDelta(account, budgetCategory, amount);
 
         transactionRepository.save(transaction);
     }
