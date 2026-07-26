@@ -46,9 +46,28 @@
         </div>
 
         <div class="accounts-total">
-            <span class="total-label">Net Worth</span>
-            <span class="total-amount bree-serif"
-                  th:text="${'$' + #numbers.formatDecimal(netWorth ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+            <div class="accounts-total-row">
+                <span class="total-label">Net Worth</span>
+                <span class="total-amount bree-serif"
+                      th:text="${'$' + #numbers.formatDecimal(netWorth ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+            </div>
+            <div class="accounts-total-row">
+                <span class="total-label">Categorized</span>
+                <span class="total-amount bree-serif"
+                      th:text="${'$' + #numbers.formatDecimal(categoryBalance ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+            </div>
+            <div class="accounts-total-row balance-indicator"
+                 th:with="diff=${balanceDifference ?: 0}"
+                 th:classappend="${diff == 0} ? 'balance-indicator--balanced' : (${diff > 0} ? 'balance-indicator--warning' : 'balance-indicator--danger')">
+                <span class="total-label balance-indicator-label">
+                    <i th:class="${diff == 0} ? 'fas fa-check-circle' : (${diff > 0} ? 'fas fa-exclamation-triangle' : 'fas fa-exclamation-circle')"></i>
+                    <span th:if="${diff == 0}">Balanced</span>
+                    <span th:if="${diff > 0}">To be categorized</span>
+                    <span th:if="${diff < 0}">Overcategorized</span>
+                </span>
+                <span class="total-amount bree-serif" th:if="${diff != 0}"
+                      th:text="${'$' + #numbers.formatDecimal(diff.abs(), 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+            </div>
         </div>
     </div>
 </body>

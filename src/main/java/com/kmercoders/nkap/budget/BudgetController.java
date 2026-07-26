@@ -5,6 +5,7 @@ import com.kmercoders.nkap.account.AccountService;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
+import com.kmercoders.nkap.category.CategoryService;
 import com.kmercoders.nkap.transaction.TransactionService;
 import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
 
@@ -32,13 +33,16 @@ public class BudgetController {
     private final AppUserService appUserService;
     private final AccountService accountService;
     private final TransactionService transactionService;
+    private final CategoryService categoryService;
 
     public BudgetController(BudgetService budgetService, AppUserService appUserService,
-                            AccountService accountService, TransactionService transactionService) {
+                            AccountService accountService, TransactionService transactionService,
+                            CategoryService categoryService) {
         this.budgetService      = budgetService;
         this.appUserService     = appUserService;
         this.accountService     = accountService;
         this.transactionService = transactionService;
+        this.categoryService    = categoryService;
     }
 
     @GetMapping("/")
@@ -138,8 +142,11 @@ public class BudgetController {
         BigDecimal netWorth = accounts.stream()
             .map(AccountDTO::getBalance)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal categoryBalance = categoryService.getTotalCategoryBalanceForCurrentUser();
         model.addAttribute("accounts", accounts);
         model.addAttribute("netWorth", netWorth);
+        model.addAttribute("categoryBalance", categoryBalance);
+        model.addAttribute("balanceDifference", netWorth.subtract(categoryBalance));
         model.addAttribute("accountIdsWithTransactions", accountService.getAccountIdsWithTransactionsForCurrentUser());
     }
 

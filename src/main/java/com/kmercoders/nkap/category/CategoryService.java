@@ -84,6 +84,13 @@ public class CategoryService {
             .toList();
     }
 
+    public BigDecimal getTotalCategoryBalanceForCurrentUser() {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+        return categoryRepository.findDistinctByGroup_Budgets_AppUserId(appUser.getId()).stream()
+            .map(Category::getBalance)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     @Transactional
     public CategoryDTO updateCategory(Long budgetId, Long groupId, Long categoryId, CategoryRequest request) {
         BudgetCategory bc = budgetCategoryRepository

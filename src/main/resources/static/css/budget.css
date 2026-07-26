@@ -9,6 +9,7 @@
     --nkap-blue-light:  #e8f4fd;
     --nkap-green:       #27ae60;
     --nkap-red:         #e74c3c;
+    --nkap-orange:      #f39c12;
     --sidebar-bg:       #f8f9fa;
     --sidebar-border:   #e3e8ef;
     --header-height:    64px;
@@ -410,11 +411,17 @@ html, body {
 
 .accounts-total {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
     padding: 10px 20px 8px;
     border-top: 1px solid var(--sidebar-border);
     margin-top: 6px;
+}
+
+.accounts-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .total-label {
@@ -428,6 +435,45 @@ html, body {
 .total-amount {
     font-size: 1rem;
     color: var(--nkap-blue);
+}
+
+.balance-indicator {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
+.balance-indicator-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.balance-indicator--balanced .total-label,
+.balance-indicator--balanced .total-amount {
+    color: var(--nkap-green);
+}
+
+.balance-indicator--warning .total-label,
+.balance-indicator--warning .total-amount {
+    color: var(--nkap-orange);
+}
+
+.balance-indicator--danger .total-label,
+.balance-indicator--danger .total-amount {
+    color: var(--nkap-red);
+}
+
+.balance-indicator--balanced {
+    background: #e8f8f0;
+}
+
+.balance-indicator--warning {
+    background: #fdf3e3;
+}
+
+.balance-indicator--danger {
+    background: #fdecea;
 }
 
 /* User / Logout row */
