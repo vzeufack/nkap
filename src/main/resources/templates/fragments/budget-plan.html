@@ -34,6 +34,33 @@
                  th:if="${budget != null}"
                  th:attr="data-budget-id=${budget.id}">
 
+                <!-- Budget metrics row -->
+                <div class="budget-metrics-row">
+                    <div class="budget-metric-card">
+                        <span class="budget-metric-label">Planned income</span>
+                        <span class="budget-metric-value"
+                              th:text="${'$' + #numbers.formatDecimal(plannedIncome ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                    </div>
+                    <div class="budget-metric-card">
+                        <span class="budget-metric-label">Planned expenses</span>
+                        <span class="budget-metric-value"
+                              th:text="${'$' + #numbers.formatDecimal(plannedExpenses ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                    </div>
+                    <div class="budget-metric-card"
+                         th:classappend="${planStatus == 'warning'} ? 'budget-metric-card--warning' : (${planStatus == 'error'} ? 'budget-metric-card--danger' : 'budget-metric-card--success')">
+                        <span class="budget-metric-label"
+                              th:text="${planStatus == 'warning'} ? 'Left to plan' : (${planStatus == 'error'} ? 'Overplanned' : 'Fully planned')">Left to plan</span>
+                        <span class="budget-metric-value"
+                              th:text="${'$' + #numbers.formatDecimal(planDifference ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                    </div>
+                    <div class="budget-metric-card"
+                         th:classappend="${spentStatus == 'warning'} ? 'budget-metric-card--warning' : 'budget-metric-card--success'">
+                        <span class="budget-metric-label">Spent so far</span>
+                        <span class="budget-metric-value"
+                              th:text="${'$' + #numbers.formatDecimal(spentSoFar ?: 0, 1, 'COMMA', 2, 'POINT')}">$0.00</span>
+                    </div>
+                </div>
+
                 <!-- Groups empty state -->
                 <div class="groups-empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center"
                      th:if="${budget.groups == null or budget.groups.isEmpty()}">

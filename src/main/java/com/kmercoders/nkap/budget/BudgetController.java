@@ -6,6 +6,7 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.CategoryService;
+import com.kmercoders.nkap.transaction.Direction;
 import com.kmercoders.nkap.transaction.TransactionService;
 import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
 
@@ -13,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +84,8 @@ public class BudgetController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
             model.addAttribute("categoryIdsWithTransactions", categoryIdsWithTransactions);
+
+            addBudgetMetrics(model, budget, transactions);
         }
 
         return "home";
@@ -126,6 +130,8 @@ public class BudgetController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
             model.addAttribute("categoryIdsWithTransactions", categoryIdsWithTransactions);
+
+            addBudgetMetrics(model, budget, transactions);
         }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
@@ -135,6 +141,45 @@ public class BudgetController {
     public String showAccountsSidebar(Model model) {
         addAccountAttributes(model);
         return "fragments/accounts-sidebar :: accounts-sidebar";
+    }
+
+    private void addBudgetMetrics(Model model, Budget budget, List<TransactionSummaryDTO> transactions) {
+        BigDecimal plannedIncome = BigDecimal.ZERO;
+        BigDecimal plannedExpenses = BigDecimal.ZERO;
+        Set<Long> expenseCategoryIds = new HashSet<>();
+
+        for (BudgetCategory bc : budget.getBudgetCategories()) {
+            if (bc.getCategory().getGroup().isDefault()) {
+                plannedIncome = plannedIncome.add(bc.getAllocation());
+            } else {
+                plannedExpenses = plannedExpenses.add(bc.getAllocation());
+                expenseCategoryIds.add(bc.getCategory().getId());
+            }
+        }
+
+        BigDecimal spentSoFar = transactions.stream()
+            .filter(tx -> tx.getCategoryId() != null && expenseCategoryIds.contains(tx.getCategoryId()))
+            .map(tx -> tx.getDirection() == Direction.DEBIT ? tx.getAmount() : tx.getAmount().negate())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        int comparison = plannedIncome.compareTo(plannedExpenses);
+        String planStatus;
+        if (comparison > 0) {
+            planStatus = "warning";
+        } else if (comparison == 0) {
+            planStatus = "balanced";
+        } else {
+            planStatus = "error";
+        }
+
+        String spentStatus = spentSoFar.compareTo(plannedExpenses) > 0 ? "warning" : "balanced";
+
+        model.addAttribute("spentStatus", spentStatus);
+        model.addAttribute("plannedIncome", plannedIncome);
+        model.addAttribute("plannedExpenses", plannedExpenses);
+        model.addAttribute("planDifference", plannedIncome.subtract(plannedExpenses).abs());
+        model.addAttribute("planStatus", planStatus);
+        model.addAttribute("spentSoFar", spentSoFar);
     }
 
     private void addAccountAttributes(Model model) {
