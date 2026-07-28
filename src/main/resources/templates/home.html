@@ -250,6 +250,16 @@
                     </select>
                     <div class="invalid-feedback" id="accountTypeError"></div>
                 </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="accountFinancialInstitutionSelect">Financial Institution</label>
+                    <select id="accountFinancialInstitutionSelect" class="form-control nkap-input">
+                        <option value="">None</option>
+                        <option th:each="fi : ${financialInstitutions}"
+                                th:value="${fi.id}"
+                                th:text="${fi.displayName}">Bank of America</option>
+                    </select>
+                    <div class="invalid-feedback" id="accountFinancialInstitutionError"></div>
+                </div>
                 <div class="form-group mb-0">
                     <label class="nkap-input-label" for="accountBalanceInput">Opening Balance</label>
                     <div class="input-group">
@@ -307,6 +317,16 @@
                         <option value="CREDIT">Credit</option>
                     </select>
                     <div class="invalid-feedback" id="editAccountTypeError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="editAccountFinancialInstitutionSelect">Financial Institution</label>
+                    <select id="editAccountFinancialInstitutionSelect" class="form-control nkap-input">
+                        <option value="">None</option>
+                        <option th:each="fi : ${financialInstitutions}"
+                                th:value="${fi.id}"
+                                th:text="${fi.displayName}">Bank of America</option>
+                    </select>
+                    <div class="invalid-feedback" id="editAccountFinancialInstitutionError"></div>
                 </div>
                 <div class="form-group mb-0">
                     <label class="nkap-input-label" for="editAccountBalanceInput">Balance</label>
@@ -827,11 +847,12 @@
         document.getElementById('editAccountId').value             = btn.dataset.id;
         document.getElementById('editAccountNameInput').value      = btn.dataset.name;
         document.getElementById('editAccountTypeSelect').value     = btn.dataset.type;
+        document.getElementById('editAccountFinancialInstitutionSelect').value = btn.dataset.financialInstitutionId || '';
         document.getElementById('editAccountBalanceInput').value   = btn.dataset.balance;
-        ['editAccountNameInput', 'editAccountTypeSelect', 'editAccountBalanceInput'].forEach(function(id) {
+        ['editAccountNameInput', 'editAccountTypeSelect', 'editAccountFinancialInstitutionSelect', 'editAccountBalanceInput'].forEach(function(id) {
             document.getElementById(id).classList.remove('is-invalid');
         });
-        ['editAccountNameError', 'editAccountTypeError', 'editAccountBalanceError'].forEach(function(id) {
+        ['editAccountNameError', 'editAccountTypeError', 'editAccountFinancialInstitutionError', 'editAccountBalanceError'].forEach(function(id) {
             document.getElementById(id).textContent = '';
         });
         $('#editAccountModal').modal('show');
@@ -840,6 +861,7 @@
     function updateAccount() {
         var nameInput    = document.getElementById('editAccountNameInput');
         var typeSelect   = document.getElementById('editAccountTypeSelect');
+        var fiSelect     = document.getElementById('editAccountFinancialInstitutionSelect');
         var balanceInput = document.getElementById('editAccountBalanceInput');
         var nameError    = document.getElementById('editAccountNameError');
         var balanceError = document.getElementById('editAccountBalanceError');
@@ -849,10 +871,11 @@
         nameError.textContent    = '';
         balanceError.textContent = '';
 
-        var name       = nameInput.value.trim();
-        var type       = typeSelect.value;
-        var balanceRaw = balanceInput.value.trim();
-        var balance    = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
+        var name                   = nameInput.value.trim();
+        var type                   = typeSelect.value;
+        var financialInstitutionId = fiSelect.value ? Number.parseInt(fiSelect.value, 10) : null;
+        var balanceRaw             = balanceInput.value.trim();
+        var balance                = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
 
         var valid = true;
         if (!name) {
@@ -878,7 +901,7 @@
         fetch('/accounts/' + id, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, accountType: type, balance: balance })
+            body: JSON.stringify({ name: name, accountType: type, balance: balance, financialInstitutionId: financialInstitutionId })
         })
         .then(function(response) {
             if (response.ok) return response.json();
@@ -914,11 +937,12 @@
     function openAddAccountModal() {
         document.getElementById('accountNameInput').value = '';
         document.getElementById('accountTypeSelect').value = 'CHECKING';
+        document.getElementById('accountFinancialInstitutionSelect').value = '';
         document.getElementById('accountBalanceInput').value = '';
-        ['accountNameInput', 'accountTypeSelect', 'accountBalanceInput'].forEach(function(id) {
+        ['accountNameInput', 'accountTypeSelect', 'accountFinancialInstitutionSelect', 'accountBalanceInput'].forEach(function(id) {
             document.getElementById(id).classList.remove('is-invalid');
         });
-        ['accountNameError', 'accountTypeError', 'accountBalanceError'].forEach(function(id) {
+        ['accountNameError', 'accountTypeError', 'accountFinancialInstitutionError', 'accountBalanceError'].forEach(function(id) {
             document.getElementById(id).textContent = '';
         });
         $('#addAccountModal').modal('show');
@@ -927,6 +951,7 @@
     function saveAccount() {
         var nameInput    = document.getElementById('accountNameInput');
         var typeSelect   = document.getElementById('accountTypeSelect');
+        var fiSelect     = document.getElementById('accountFinancialInstitutionSelect');
         var balanceInput = document.getElementById('accountBalanceInput');
         var nameError    = document.getElementById('accountNameError');
         var balanceError = document.getElementById('accountBalanceError');
@@ -936,10 +961,11 @@
         nameError.textContent    = '';
         balanceError.textContent = '';
 
-        var name       = nameInput.value.trim();
-        var type       = typeSelect.value;
-        var balanceRaw = balanceInput.value.trim();
-        var balance    = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
+        var name                   = nameInput.value.trim();
+        var type                   = typeSelect.value;
+        var financialInstitutionId = fiSelect.value ? Number.parseInt(fiSelect.value, 10) : null;
+        var balanceRaw             = balanceInput.value.trim();
+        var balance                = balanceRaw === '' ? 0 : Number.parseFloat(balanceRaw);
 
         var valid = true;
         if (!name) {
@@ -964,7 +990,7 @@
         fetch('/accounts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, accountType: type, balance: balance })
+            body: JSON.stringify({ name: name, accountType: type, balance: balance, financialInstitutionId: financialInstitutionId })
         })
         .then(function(response) {
             if (response.ok) return response.json();

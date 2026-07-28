@@ -6,6 +6,7 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.CategoryService;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitutionService;
 import com.kmercoders.nkap.transaction.Direction;
 import com.kmercoders.nkap.transaction.TransactionService;
 import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
@@ -36,15 +37,17 @@ public class BudgetController {
     private final AccountService accountService;
     private final TransactionService transactionService;
     private final CategoryService categoryService;
+    private final FinancialInstitutionService financialInstitutionService;
 
     public BudgetController(BudgetService budgetService, AppUserService appUserService,
                             AccountService accountService, TransactionService transactionService,
-                            CategoryService categoryService) {
-        this.budgetService      = budgetService;
-        this.appUserService     = appUserService;
-        this.accountService     = accountService;
-        this.transactionService = transactionService;
-        this.categoryService    = categoryService;
+                            CategoryService categoryService, FinancialInstitutionService financialInstitutionService) {
+        this.budgetService              = budgetService;
+        this.appUserService             = appUserService;
+        this.accountService             = accountService;
+        this.transactionService         = transactionService;
+        this.categoryService            = categoryService;
+        this.financialInstitutionService = financialInstitutionService;
     }
 
     @GetMapping("/")
@@ -193,6 +196,7 @@ public class BudgetController {
         model.addAttribute("categoryBalance", categoryBalance);
         model.addAttribute("balanceDifference", netWorth.subtract(categoryBalance));
         model.addAttribute("accountIdsWithTransactions", accountService.getAccountIdsWithTransactionsForCurrentUser());
+        model.addAttribute("financialInstitutions", financialInstitutionService.getAllFinancialInstitutions());
     }
 
     @PostMapping("/create/{month}/{year}")

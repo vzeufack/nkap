@@ -17,10 +17,14 @@ public class AccountRequest {
     @NotNull(message = "Balance is required")
     private BigDecimal balance;
 
+    private Long financialInstitutionId;
+
     public String getName()                       { return name; }
     public void setName(String name)              { this.name = name; }
     public AccountType getAccountType()           { return accountType; }
     public void setAccountType(AccountType type)  { this.accountType = type; }
     public BigDecimal getBalance()                { return balance; }
     public void setBalance(BigDecimal balance)    { this.balance = balance; }
+    public Long getFinancialInstitutionId()               { return financialInstitutionId; }
+    public void setFinancialInstitutionId(Long financialInstitutionId) { this.financialInstitutionId = financialInstitutionId; }
 }

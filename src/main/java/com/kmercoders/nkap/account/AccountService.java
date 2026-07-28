@@ -4,6 +4,8 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitution;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitutionRepository;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionService;
 import org.springframework.http.HttpStatus;
@@ -26,15 +28,18 @@ public class AccountService {
     private final TransactionRepository transactionRepository;
     private final TransactionService transactionService;
     private final BudgetRepository budgetRepository;
+    private final FinancialInstitutionRepository financialInstitutionRepository;
 
     public AccountService(AccountRepository accountRepository, AppUserService appUserService,
                           TransactionRepository transactionRepository, TransactionService transactionService,
-                          BudgetRepository budgetRepository) {
-        this.accountRepository     = accountRepository;
-        this.appUserService        = appUserService;
-        this.transactionRepository = transactionRepository;
-        this.transactionService    = transactionService;
-        this.budgetRepository      = budgetRepository;
+                          BudgetRepository budgetRepository,
+                          FinancialInstitutionRepository financialInstitutionRepository) {
+        this.accountRepository              = accountRepository;
+        this.appUserService                 = appUserService;
+        this.transactionRepository          = transactionRepository;
+        this.transactionService             = transactionService;
+        this.budgetRepository               = budgetRepository;
+        this.financialInstitutionRepository = financialInstitutionRepository;
     }
 
     public List<AccountDTO> getAccountsForCurrentUser() {
@@ -54,6 +59,7 @@ public class AccountService {
     public AccountDTO createAccount(AccountRequest request) {
         AppUser appUser = appUserService.getAuthenticatedUser();
         Account account = new Account(request.getAccountType(), request.getName(), BigDecimal.ZERO, appUser);
+        account.setFinancialInstitution(resolveFinancialInstitution(request.getFinancialInstitutionId()));
         accountRepository.save(account);
 
         if (request.getBalance().compareTo(BigDecimal.ZERO) != 0) {
@@ -72,6 +78,7 @@ public class AccountService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         account.setName(request.getName());
         account.setType(request.getAccountType());
+        account.setFinancialInstitution(resolveFinancialInstitution(request.getFinancialInstitutionId()));
 
         BigDecimal delta = request.getBalance().subtract(account.getBalance());
         if (delta.compareTo(BigDecimal.ZERO) != 0) {
@@ -89,6 +96,14 @@ public class AccountService {
             .or(() -> budgetRepository.findLastBudgetByAppUser(appUser))
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "Create a budget before setting a non-zero account balance."));
+    }
+
+    private FinancialInstitution resolveFinancialInstitution(Long financialInstitutionId) {
+        if (financialInstitutionId == null) {
+            return null;
+        }
+        return financialInstitutionRepository.findById(financialInstitutionId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Financial institution not found"));
     }
 
     @Transactional

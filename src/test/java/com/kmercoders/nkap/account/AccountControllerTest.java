@@ -6,6 +6,8 @@ import com.kmercoders.nkap.appuser.AppUserRepository;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.budget.BudgetService;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitution;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitutionRepository;
 import com.kmercoders.nkap.transaction.Transaction;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionRequest;
@@ -48,6 +50,7 @@ class AccountControllerTest {
     @Autowired private BudgetRepository budgetRepository;
     @Autowired private BudgetService budgetService;
     @Autowired private TransactionRepository transactionRepository;
+    @Autowired private FinancialInstitutionRepository financialInstitutionRepository;
 
     private static final String EMAIL = "account_user@example.com";
     private static final String URL   = "/accounts";
@@ -79,6 +82,12 @@ class AccountControllerTest {
         r.setName(name);
         r.setAccountType(type);
         r.setBalance(balance);
+        return r;
+    }
+
+    private AccountRequest request(String name, AccountType type, BigDecimal balance, Long financialInstitutionId) {
+        AccountRequest r = request(name, type, balance);
+        r.setFinancialInstitutionId(financialInstitutionId);
         return r;
     }
 
@@ -284,6 +293,47 @@ class AccountControllerTest {
                 .andExpect(status().isBadRequest());
 
         assertThat(accountRepository.findByAppUser(appUserRepository.findByEmail(EMAIL).orElseThrow())).isEmpty();
+    }
+
+    // ── Create: Financial institution linkage ─────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withFinancialInstitution_returns200AndIncludesInstitution() throws Exception {
+        FinancialInstitution boa = financialInstitutionRepository.findByKey("BANK_OF_AMERICA").orElseThrow();
+
+        AccountRequest req = request("Main Checking", AccountType.CHECKING, BigDecimal.ZERO, boa.getId());
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.financialInstitution.id", is(boa.getId().intValue())))
+                .andExpect(jsonPath("$.financialInstitution.key", is("BANK_OF_AMERICA")))
+                .andExpect(jsonPath("$.financialInstitution.displayName", is("Bank of America")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withoutFinancialInstitution_returnsNullInstitution() throws Exception {
+        AccountRequest req = request("Cash Wallet", AccountType.CASH, BigDecimal.ZERO);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.financialInstitution").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void createAccount_withNonExistentFinancialInstitution_returns400() throws Exception {
+        AccountRequest req = request("Main Checking", AccountType.CHECKING, BigDecimal.ZERO, 999999L);
+
+        mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
     }
 
     // ── List: Happy path ───────────────────────────────────────────────────────

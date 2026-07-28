@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.kmercoders.nkap.appuser.AppUser;
+import com.kmercoders.nkap.financialinstitution.FinancialInstitution;
 import com.kmercoders.nkap.transaction.Transaction;
 
 import jakarta.persistence.CascadeType;
@@ -44,6 +45,10 @@ public class Account implements Serializable {
     @JoinColumn(name = "app_user_id", nullable = false)
     private AppUser appUser;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "financial_institution_id")
+    private FinancialInstitution financialInstitution;
+
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Transaction> transactions = new ArrayList<>();
 
@@ -71,6 +76,9 @@ public class Account implements Serializable {
 
     public AppUser getAppUser() { return appUser; }
     public void setAppUser(AppUser appUser) { this.appUser = appUser; }
+
+    public FinancialInstitution getFinancialInstitution() { return financialInstitution; }
+    public void setFinancialInstitution(FinancialInstitution financialInstitution) { this.financialInstitution = financialInstitution; }
 
     public List<Transaction> getTransactions() { return transactions; }
 }
