@@ -192,6 +192,39 @@ public class TransactionService {
     }
 
     @Transactional
+    public int createTransactionsBulk(Account account, List<BulkTransactionInput> inputs) {
+        List<Transaction> transactions = inputs.stream()
+            .map(input -> {
+                Transaction transaction = new Transaction(
+                    input.amount(),
+                    input.transactionDate(),
+                    input.direction(),
+                    TransactionType.STANDARD,
+                    null,
+                    account,
+                    null,
+                    input.budget()
+                );
+                transaction.setDescription(input.description());
+                applyBalanceDelta(account, null, signedAmount(input.amount(), input.direction()));
+                return transaction;
+            })
+            .toList();
+
+        transactionRepository.saveAll(transactions);
+        return transactions.size();
+    }
+
+    public record BulkTransactionInput(
+        BigDecimal amount,
+        Direction direction,
+        LocalDate transactionDate,
+        String description,
+        Budget budget
+    ) {
+    }
+
+    @Transactional
     public void deleteTransaction(Long transactionId) {
         AppUser appUser = appUserService.getAuthenticatedUser();
 
