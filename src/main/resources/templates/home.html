@@ -51,7 +51,8 @@
                     onclick="openAddTransactionModal()">
                 <i class="fas fa-plus mr-1"></i> Add Transaction
             </button>
-            <button class="btn btn-header btn-outline-nkap mr-2" title="Bulk Upload">
+            <button class="btn btn-header btn-outline-nkap mr-2" id="btnBulkUpload" title="Bulk Upload"
+                    onclick="openBulkUploadModal()">
                 <i class="fas fa-upload mr-1"></i> Bulk Upload
             </button>
         </div>
@@ -535,6 +536,84 @@
                     <span id="btnUpdateTransactionSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
                     <i class="fas fa-check mr-2" id="btnUpdateTransactionIcon"></i>
                     Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Bulk Upload Modal ══ -->
+<div class="modal fade" id="bulkUploadModal" tabindex="-1" role="dialog"
+     aria-labelledby="bulkUploadModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="bulkUploadModalTitle">Bulk Upload Transactions</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="upload-error-list d-none" id="bulkUploadErrorList"></div>
+
+                <div id="bulkUploadFormScreen">
+                    <div class="form-group mb-3">
+                        <label class="nkap-input-label" for="bulkUploadAccountSelect">Account</label>
+                        <select id="bulkUploadAccountSelect" class="form-control nkap-input">
+                            <option value="">— Select an account —</option>
+                            <option th:each="account : ${accounts}"
+                                    th:value="${account.id}"
+                                    th:text="${account.name}">Checking</option>
+                        </select>
+                        <div class="invalid-feedback d-block" id="bulkUploadAccountError"></div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="nkap-input-label" for="bulkUploadFileInput">CSV File</label>
+                        <input type="file" id="bulkUploadFileInput" class="form-control-file nkap-input"
+                               accept=".csv,text/csv"/>
+                        <div class="invalid-feedback d-block" id="bulkUploadFileError"></div>
+                        <small class="text-muted">
+                            Currently supports Checking, Savings, and Credit accounts from Bank of America,
+                            and Credit accounts from Capital One.
+                        </small>
+                    </div>
+                </div>
+
+                <div id="bulkUploadPreviewScreen" class="d-none">
+                    <div class="upload-budgets-note d-none" id="bulkUploadBudgetsNote"></div>
+                    <div style="max-height: 320px; overflow-y: auto;">
+                        <table class="upload-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Direction</th>
+                                    <th class="cat-col-number">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkUploadPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-cancel d-none" id="btnBulkUploadBack"
+                        onclick="backToBulkUploadForm()">Back</button>
+                <button type="button" class="btn btn-modal-save" id="btnBulkUploadPreview" onclick="previewBulkUpload()">
+                    <span id="btnBulkUploadPreviewSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnBulkUploadPreviewIcon"></i>
+                    Upload &amp; Preview
+                </button>
+                <button type="button" class="btn btn-modal-save d-none" id="btnBulkUploadConfirm" onclick="confirmBulkUpload()">
+                    <span id="btnBulkUploadConfirmSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnBulkUploadConfirmIcon"></i>
+                    Confirm Import
                 </button>
             </div>
         </div>
@@ -1039,6 +1118,220 @@
         .catch(function(err) {
             console.error('Error deleting account:', err);
             alert('Could not delete this account. It may have transactions linked to it or a non-zero balance.');
+            btn.disabled = false;
+        });
+    }
+
+    var bulkUploadCachedRows = [];
+
+    function openBulkUploadModal() {
+        document.getElementById('bulkUploadAccountSelect').value = '';
+        document.getElementById('bulkUploadFileInput').value = '';
+        document.getElementById('bulkUploadAccountSelect').classList.remove('is-invalid');
+        document.getElementById('bulkUploadFileInput').classList.remove('is-invalid');
+        document.getElementById('bulkUploadAccountError').textContent = '';
+        document.getElementById('bulkUploadFileError').textContent = '';
+        hideBulkUploadErrors();
+        bulkUploadCachedRows = [];
+        showBulkUploadFormScreen();
+        $('#bulkUploadModal').modal('show');
+    }
+
+    function showBulkUploadFormScreen() {
+        document.getElementById('bulkUploadFormScreen').classList.remove('d-none');
+        document.getElementById('bulkUploadPreviewScreen').classList.add('d-none');
+        document.getElementById('btnBulkUploadBack').classList.add('d-none');
+        document.getElementById('btnBulkUploadConfirm').classList.add('d-none');
+        document.getElementById('btnBulkUploadPreview').classList.remove('d-none');
+    }
+
+    function showBulkUploadPreviewScreen() {
+        document.getElementById('bulkUploadFormScreen').classList.add('d-none');
+        document.getElementById('bulkUploadPreviewScreen').classList.remove('d-none');
+        document.getElementById('btnBulkUploadBack').classList.remove('d-none');
+        document.getElementById('btnBulkUploadConfirm').classList.remove('d-none');
+        document.getElementById('btnBulkUploadPreview').classList.add('d-none');
+    }
+
+    function backToBulkUploadForm() {
+        hideBulkUploadErrors();
+        showBulkUploadFormScreen();
+    }
+
+    function hideBulkUploadErrors() {
+        var box = document.getElementById('bulkUploadErrorList');
+        box.innerHTML = '';
+        box.classList.add('d-none');
+    }
+
+    function showBulkUploadErrors(errors) {
+        var box = document.getElementById('bulkUploadErrorList');
+        box.innerHTML = '';
+        var list = document.createElement('ul');
+        list.className = 'mb-0';
+        (errors && errors.length ? errors : ['Something went wrong. Please try again.']).forEach(function(msg) {
+            var li = document.createElement('li');
+            li.textContent = msg;
+            list.appendChild(li);
+        });
+        box.appendChild(list);
+        box.classList.remove('d-none');
+    }
+
+    function previewBulkUpload() {
+        var accountSelect = document.getElementById('bulkUploadAccountSelect');
+        var fileInput      = document.getElementById('bulkUploadFileInput');
+        var accountError   = document.getElementById('bulkUploadAccountError');
+        var fileError      = document.getElementById('bulkUploadFileError');
+
+        accountSelect.classList.remove('is-invalid');
+        fileInput.classList.remove('is-invalid');
+        accountError.textContent = '';
+        fileError.textContent    = '';
+        hideBulkUploadErrors();
+
+        var valid = true;
+        if (!accountSelect.value) {
+            accountSelect.classList.add('is-invalid');
+            accountError.textContent = 'Please select an account.';
+            valid = false;
+        }
+        if (!fileInput.files || fileInput.files.length === 0) {
+            fileInput.classList.add('is-invalid');
+            fileError.textContent = 'Please select a CSV file.';
+            valid = false;
+        }
+        if (!valid) return;
+
+        var spinner = document.getElementById('btnBulkUploadPreviewSpinner');
+        var icon    = document.getElementById('btnBulkUploadPreviewIcon');
+        var btn     = document.getElementById('btnBulkUploadPreview');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        var formData = new FormData();
+        formData.append('accountId', accountSelect.value);
+        formData.append('file', fileInput.files[0]);
+
+        fetch('/bulk-upload/preview', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function(data) {
+            bulkUploadCachedRows = data.rows || [];
+            renderBulkUploadPreview(data);
+            showBulkUploadPreviewScreen();
+        })
+        .catch(function(err) {
+            if (err && Array.isArray(err.errors)) {
+                showBulkUploadErrors(err.errors);
+            } else if (err && err.message) {
+                showBulkUploadErrors([err.message]);
+            } else {
+                showBulkUploadErrors(null);
+            }
+            console.error('Error previewing bulk upload:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
+
+    function renderBulkUploadPreview(data) {
+        var body = document.getElementById('bulkUploadPreviewBody');
+        body.innerHTML = '';
+        (data.rows || []).forEach(function(row) {
+            var tr = document.createElement('tr');
+
+            var dateTd = document.createElement('td');
+            dateTd.textContent = row.transactionDate;
+            tr.appendChild(dateTd);
+
+            var descTd = document.createElement('td');
+            descTd.textContent = row.description;
+            tr.appendChild(descTd);
+
+            var dirTd = document.createElement('td');
+            dirTd.textContent = row.direction === 'DEBIT' ? 'Debit' : 'Credit';
+            tr.appendChild(dirTd);
+
+            var amountTd = document.createElement('td');
+            amountTd.className = 'cat-col-number' + (row.direction === 'DEBIT' ? ' amount-debit' : '');
+            amountTd.textContent = '$' + Number(row.amount).toFixed(2);
+            tr.appendChild(amountTd);
+
+            body.appendChild(tr);
+        });
+
+        var note = document.getElementById('bulkUploadBudgetsNote');
+        var budgets = data.budgetsToCreate || [];
+        if (budgets.length > 0) {
+            var monthNames = budgets.map(function(b) {
+                return b.month.charAt(0) + b.month.slice(1).toLowerCase() + ' ' + b.year;
+            });
+            note.textContent = 'This will also create budgets for: ' + monthNames.join(', ') + '.';
+            note.classList.remove('d-none');
+        } else {
+            note.textContent = '';
+            note.classList.add('d-none');
+        }
+    }
+
+    function confirmBulkUpload() {
+        var accountSelect = document.getElementById('bulkUploadAccountSelect');
+        var spinner = document.getElementById('btnBulkUploadConfirmSpinner');
+        var icon    = document.getElementById('btnBulkUploadConfirmIcon');
+        var btn     = document.getElementById('btnBulkUploadConfirm');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+        hideBulkUploadErrors();
+
+        var payload = {
+            accountId: Number.parseInt(accountSelect.value, 10),
+            transactions: bulkUploadCachedRows.map(function(row) {
+                return {
+                    transactionDate: row.transactionDate,
+                    amount: row.amount,
+                    direction: row.direction,
+                    description: row.description
+                };
+            })
+        };
+
+        fetch('/bulk-upload/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function() {
+            $('#bulkUploadModal').modal('hide');
+            document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+        })
+        .catch(function(err) {
+            if (err && Array.isArray(err.errors)) {
+                showBulkUploadErrors(err.errors);
+            } else if (err && typeof err === 'object' && !err.message) {
+                showBulkUploadErrors(Object.values(err));
+            } else {
+                showBulkUploadErrors(null);
+            }
+            console.error('Error confirming bulk upload:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
             btn.disabled = false;
         });
     }
