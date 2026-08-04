@@ -216,60 +216,142 @@
                       th:text="${transactions != null ? transactions.size() : 0}">0</span>
             </div>
 
-            <div class="tx-list flex-grow-1">
+            <div class="tx-empty flex-grow-1"
+                 th:if="${transactions == null or transactions.isEmpty()}">
+                <i class="fas fa-receipt tx-empty-icon"></i>
+                <span>No transactions yet for this period.</span>
+            </div>
 
-                <div class="tx-empty"
-                     th:if="${transactions == null or transactions.isEmpty()}">
-                    <i class="fas fa-receipt tx-empty-icon"></i>
-                    <span>No transactions yet for this period.</span>
+            <th:block th:if="${transactions != null and !transactions.isEmpty()}"
+                      th:with="uncategorizedTx=${transactions.?[categoryId == null]}, categorizedTx=${transactions.?[categoryId != null]}">
+
+                <div class="tx-tabs">
+                    <button type="button" class="tx-tab active" data-tx-tab="uncategorized"
+                            onclick="switchTxTab('uncategorized')">
+                        Uncategorized
+                        <span class="tx-tab-count" th:text="${uncategorizedTx.size()}">0</span>
+                    </button>
+                    <button type="button" class="tx-tab" data-tx-tab="categorized"
+                            onclick="switchTxTab('categorized')">
+                        Categorized
+                        <span class="tx-tab-count" th:text="${categorizedTx.size()}">0</span>
+                    </button>
                 </div>
 
-                <th:block th:if="${transactions != null and !transactions.isEmpty()}">
-                    <div class="tx-row" th:each="tx : ${transactions}">
-                        <div class="tx-date-badge">
-                            <span class="tx-date-month"
-                                  th:text="${#temporals.format(tx.transactionDate, 'MMM')}">Jan</span>
-                            <span class="tx-date-day"
-                                  th:text="${#temporals.format(tx.transactionDate, 'd')}">1</span>
-                        </div>
-                        <div class="tx-row-middle">
-                            <span class="tx-row-description"
-                                  th:classappend="${tx.description == null} ? 'tx-row-no-merchant' : ''"
-                                  th:text="${tx.description ?: 'No description'}">Description</span>
-                            <span class="tx-row-category"
-                                  th:text="${tx.categoryName ?: '—'}">Category</span>
-                        </div>
-                        <span class="tx-row-amount"
-                              th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
-                              th:text="${(tx.direction.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
-                            $0.00
-                        </span>
-                        <button type="button" class="tx-edit-btn" title="Edit transaction"
-                                onclick="openEditTransactionModal(this)"
-                                th:attr="data-id=${tx.id},
-                                         data-amount=${tx.amount},
-                                         data-type=${tx.direction.name()},
-                                         data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
-                                         data-description=${tx.description},
-                                         data-note=${tx.note},
-                                         data-account-id=${tx.accountId},
-                                         data-category-id=${tx.categoryId},
-                                         data-budget-id=${tx.budgetId}">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button type="button" class="tx-delete-btn" title="Delete transaction"
-                                onclick="deleteTransaction(this)"
-                                th:attr="data-id=${tx.id}">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </th:block>
+                <div class="tx-list flex-grow-1">
 
-            </div>
+                    <div class="tx-tab-panel" data-tx-panel="uncategorized">
+                        <div class="tx-empty" th:if="${uncategorizedTx.isEmpty()}">
+                            <i class="fas fa-receipt tx-empty-icon"></i>
+                            <span>No uncategorized transactions.</span>
+                        </div>
+                        <div class="tx-row" th:each="tx : ${uncategorizedTx}">
+                            <div class="tx-date-badge">
+                                <span class="tx-date-month"
+                                      th:text="${#temporals.format(tx.transactionDate, 'MMM')}">Jan</span>
+                                <span class="tx-date-day"
+                                      th:text="${#temporals.format(tx.transactionDate, 'd')}">1</span>
+                            </div>
+                            <div class="tx-row-middle">
+                                <span class="tx-row-description"
+                                      th:classappend="${tx.description == null} ? 'tx-row-no-merchant' : ''"
+                                      th:text="${tx.description ?: 'No description'}">Description</span>
+                                <span class="tx-row-category"
+                                      th:text="${tx.categoryName ?: '—'}">Category</span>
+                            </div>
+                            <span class="tx-row-amount"
+                                  th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
+                                  th:text="${(tx.direction.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                                $0.00
+                            </span>
+                            <button type="button" class="tx-edit-btn" title="Edit transaction"
+                                    onclick="openEditTransactionModal(this)"
+                                    th:attr="data-id=${tx.id},
+                                             data-amount=${tx.amount},
+                                             data-type=${tx.direction.name()},
+                                             data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
+                                             data-description=${tx.description},
+                                             data-note=${tx.note},
+                                             data-account-id=${tx.accountId},
+                                             data-category-id=${tx.categoryId},
+                                             data-budget-id=${tx.budgetId}">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button type="button" class="tx-delete-btn" title="Delete transaction"
+                                    onclick="deleteTransaction(this)"
+                                    th:attr="data-id=${tx.id}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tx-tab-panel" data-tx-panel="categorized" style="display:none;">
+                        <div class="tx-empty" th:if="${categorizedTx.isEmpty()}">
+                            <i class="fas fa-receipt tx-empty-icon"></i>
+                            <span>No categorized transactions.</span>
+                        </div>
+                        <div class="tx-row" th:each="tx : ${categorizedTx}">
+                            <div class="tx-date-badge">
+                                <span class="tx-date-month"
+                                      th:text="${#temporals.format(tx.transactionDate, 'MMM')}">Jan</span>
+                                <span class="tx-date-day"
+                                      th:text="${#temporals.format(tx.transactionDate, 'd')}">1</span>
+                            </div>
+                            <div class="tx-row-middle">
+                                <span class="tx-row-description"
+                                      th:classappend="${tx.description == null} ? 'tx-row-no-merchant' : ''"
+                                      th:text="${tx.description ?: 'No description'}">Description</span>
+                                <span class="tx-row-category"
+                                      th:text="${tx.categoryName ?: '—'}">Category</span>
+                            </div>
+                            <span class="tx-row-amount"
+                                  th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
+                                  th:text="${(tx.direction.name() == 'DEBIT' ? '−' : '+') + '$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                                $0.00
+                            </span>
+                            <button type="button" class="tx-edit-btn" title="Edit transaction"
+                                    onclick="openEditTransactionModal(this)"
+                                    th:attr="data-id=${tx.id},
+                                             data-amount=${tx.amount},
+                                             data-type=${tx.direction.name()},
+                                             data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
+                                             data-description=${tx.description},
+                                             data-note=${tx.note},
+                                             data-account-id=${tx.accountId},
+                                             data-category-id=${tx.categoryId},
+                                             data-budget-id=${tx.budgetId}">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button type="button" class="tx-delete-btn" title="Delete transaction"
+                                    onclick="deleteTransaction(this)"
+                                    th:attr="data-id=${tx.id}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </th:block>
+
         </div>
 
         <script th:inline="javascript">
         /*<![CDATA[*/
+
+        // ── Transactions: tab switching ───────────────────────
+        function switchTxTab(tab) {
+            document.querySelectorAll('.tx-tab').forEach(function (btn) {
+                btn.classList.toggle('active', btn.dataset.txTab === tab);
+            });
+            document.querySelectorAll('.tx-tab-panel').forEach(function (panel) {
+                panel.style.display = panel.dataset.txPanel === tab ? '' : 'none';
+            });
+            sessionStorage.setItem('nkapActiveTxTab', tab);
+        }
+        (function initTxTab() {
+            switchTxTab(sessionStorage.getItem('nkapActiveTxTab') || 'uncategorized');
+        })();
 
         // ── Group: Add mode ───────────────────────────────────
         function openAddGroupModal() {

@@ -858,6 +858,48 @@ html, body {
     background: rgba(237, 36, 36, 0.12);
 }
 
+.tx-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--panel-border);
+    padding: 0 12px;
+}
+
+.tx-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 8px;
+    margin: 0 4px;
+    font-family: sans-serif;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+}
+
+.tx-tab:hover {
+    color: var(--nkap-blue);
+}
+
+.tx-tab.active {
+    color: var(--nkap-blue);
+    border-bottom-color: var(--nkap-blue);
+}
+
+.tx-tab-count {
+    font-size: 0.72rem;
+    font-family: sans-serif;
+    font-weight: bold;
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue);
+    border-radius: 20px;
+    padding: 2px 9px;
+}
+
 /* ══════════════════════════════════════════
    GROUP CARDS — Budget Plan column
 ══════════════════════════════════════════ */
