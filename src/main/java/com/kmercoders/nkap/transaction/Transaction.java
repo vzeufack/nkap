@@ -8,6 +8,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "transactions")
@@ -37,6 +38,9 @@ public class Transaction implements Serializable {
 
     @Column(length = 500)
     private String note;
+
+    @Column(name = "transfer_id")
+    private UUID transferId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
@@ -83,6 +87,9 @@ public class Transaction implements Serializable {
 
     public String getNote()                                        { return note; }
     public void setNote(String note)                               { this.note = note; }
+
+    public UUID getTransferId()                                    { return transferId; }
+    public void setTransferId(UUID transferId)                     { this.transferId = transferId; }
 
     public Account getAccount()                                    { return account; }
     public void setAccount(Account account)                        { this.account = account; }

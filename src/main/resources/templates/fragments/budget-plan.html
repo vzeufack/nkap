@@ -134,11 +134,12 @@
                                                     <th class="cat-col-number">Balance</th>
                                                     <th class="cat-col-action"></th>
                                                     <th class="cat-col-action"></th>
+                                                    <th class="cat-col-action"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr th:each="bc : ${cats}"
-                                                    th:attr="data-category-id=${bc.category.id}"
+                                                    th:attr="data-category-id=${bc.category.id},data-category-balance=${bc.category.balance}"
                                                     th:with="hasTransactions=${categoryIdsWithTransactions != null and categoryIdsWithTransactions.contains(bc.category.id)},
                                                              hasBalance=${bc.category.balance != 0}"
                                                     class="cat-row">
@@ -171,6 +172,21 @@
                                                                          data-category-id=${bc.category.id}"
                                                                 title="Delete category">
                                                             <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td class="cat-action">
+                                                        <span class="cat-transfer-tooltip-wrap"
+                                                              th:if="${bc.category.balance <= 0}"
+                                                              title="No balance available to transfer">
+                                                            <button class="btn-icon btn-transfer-category" disabled="disabled">
+                                                                <i class="fas fa-random"></i>
+                                                            </button>
+                                                        </span>
+                                                        <button class="btn-icon btn-transfer-category"
+                                                                th:unless="${bc.category.balance <= 0}"
+                                                                th:attr="onclick='openTransferModal(' + ${bc.category.id} + ')'"
+                                                                title="Transfer balance">
+                                                            <i class="fas fa-random"></i>
                                                         </button>
                                                     </td>
                                                 </tr>

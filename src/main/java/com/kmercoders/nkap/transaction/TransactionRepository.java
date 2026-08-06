@@ -7,12 +7,14 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByAccountId(Long accountId);
     List<Transaction> findByBudgetId(Long budgetId);
     List<Transaction> findByBudgetIdOrderByTransactionDateDesc(Long budgetId);
     Optional<Transaction> findByIdAndBudgetAppUserId(Long id, Long appUserId);
+    List<Transaction> findByTransferId(UUID transferId);
     boolean existsByBudgetCategoryId(Long budgetCategoryId);
     boolean existsByAccountId(Long accountId);
 

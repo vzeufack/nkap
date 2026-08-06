@@ -2,6 +2,7 @@ package com.kmercoders.nkap.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public class TransactionDTO {
 
@@ -15,6 +16,7 @@ public class TransactionDTO {
     private Long accountId;
     private Long categoryId;
     private Long budgetId;
+    private UUID transferId;
 
     private TransactionDTO() {}
 
@@ -30,6 +32,7 @@ public class TransactionDTO {
         dto.accountId       = t.getAccount()         != null ? t.getAccount().getId()                          : null;
         dto.categoryId      = t.getBudgetCategory()  != null ? t.getBudgetCategory().getCategory().getId()     : null;
         dto.budgetId        = t.getBudget()          != null ? t.getBudget().getId()                           : null;
+        dto.transferId      = t.getTransferId();
         return dto;
     }
 
@@ -43,4 +46,5 @@ public class TransactionDTO {
     public Long getAccountId()                 { return accountId; }
     public Long getCategoryId()                { return categoryId; }
     public Long getBudgetId()                  { return budgetId; }
+    public UUID getTransferId()                { return transferId; }
 }

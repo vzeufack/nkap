@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -161,21 +162,36 @@ public class TransactionService {
 
     @Transactional
     public void createAdjustmentTransaction(Budget budget, Account account, BudgetCategory budgetCategory, BigDecimal amount, String description) {
-        Direction direction = amount.signum() < 0 ? Direction.DEBIT : Direction.CREDIT;
+        createLegTransaction(budget, account, budgetCategory, amount, TransactionType.ADJUSTMENT, null, description);
+    }
+
+    @Transactional
+    public void createCategoryTransfer(Budget budget, BudgetCategory source, BudgetCategory target, BigDecimal amount) {
+        UUID transferId = UUID.randomUUID();
+        createLegTransaction(budget, null, source, amount.negate(), TransactionType.TRANSFER, transferId,
+            "Transfer to " + target.getCategory().getName());
+        createLegTransaction(budget, null, target, amount, TransactionType.TRANSFER, transferId,
+            "Transfer from " + source.getCategory().getName());
+    }
+
+    private void createLegTransaction(Budget budget, Account account, BudgetCategory budgetCategory,
+                                       BigDecimal signedAmount, TransactionType type, UUID transferId, String description) {
+        Direction direction = signedAmount.signum() < 0 ? Direction.DEBIT : Direction.CREDIT;
 
         Transaction transaction = new Transaction(
-            amount.abs(),
+            signedAmount.abs(),
             adjustmentTransactionDate(budget),
             direction,
-            TransactionType.ADJUSTMENT,
+            type,
             null,
             account,
             budgetCategory,
             budget
         );
         transaction.setDescription(description);
+        transaction.setTransferId(transferId);
 
-        applyBalanceDelta(account, budgetCategory, amount);
+        applyBalanceDelta(account, budgetCategory, signedAmount);
 
         transactionRepository.save(transaction);
     }

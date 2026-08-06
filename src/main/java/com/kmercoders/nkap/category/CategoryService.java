@@ -117,6 +117,39 @@ public class CategoryService {
     }
 
     @Transactional
+    public CategoryTransferResponse transferBalance(Long budgetId, CategoryTransferRequest request) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        Budget budget = budgetRepository.findByIdAndAppUserId(budgetId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+
+        if (request.getSourceCategoryId().equals(request.getTargetCategoryId())) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Source and target categories must be different.");
+        }
+
+        BudgetCategory source = budgetCategoryRepository
+            .findByBudgetIdAndCategoryId(budgetId, request.getSourceCategoryId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Source category not found in this budget"));
+
+        BudgetCategory target = budgetCategoryRepository
+            .findByBudgetIdAndCategoryId(budgetId, request.getTargetCategoryId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Target category not found in this budget"));
+
+        BigDecimal available = source.getCategory().getBalance();
+        if (request.getAmount().compareTo(available) > 0) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Insufficient balance in " + source.getCategory().getName()
+                    + ": only $" + available.toPlainString() + " is available to transfer.");
+        }
+
+        transactionService.createCategoryTransfer(budget, source, target, request.getAmount());
+
+        return new CategoryTransferResponse(CategoryDTO.from(source), CategoryDTO.from(target));
+    }
+
+    @Transactional
     public void deleteCategory(Long budgetId, Long groupId, Long categoryId) {
         AppUser appUser = appUserService.getAuthenticatedUser();
 

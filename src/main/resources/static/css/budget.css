@@ -1459,6 +1459,39 @@ html, body {
     opacity: 0.35;
 }
 
+.btn-transfer-category {
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 3px 5px;
+}
+
+.cat-row:hover .btn-transfer-category {
+    opacity: 1;
+}
+
+.btn-transfer-category:hover:not(:disabled) {
+    color: var(--nkap-blue);
+    transform: scale(1.15);
+}
+
+.btn-transfer-category:disabled {
+    cursor: not-allowed;
+    color: var(--text-muted);
+    opacity: 0.35;
+}
+
+/* Wrapper needed so the tooltip still shows on hover — disabled buttons
+   don't receive mouse events, so the title must live on the parent span. */
+.cat-transfer-tooltip-wrap {
+    display: inline-block;
+}
+
+.cat-row:hover .cat-transfer-tooltip-wrap .btn-transfer-category {
+    opacity: 0.35;
+}
+
 /* Add Category footer button */
 .group-card-footer {
     padding: 10px 18px;
