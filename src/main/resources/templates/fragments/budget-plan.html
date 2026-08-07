@@ -239,7 +239,7 @@
             </div>
 
             <th:block th:if="${transactions != null and !transactions.isEmpty()}"
-                      th:with="uncategorizedTx=${transactions.?[categoryId == null]}, categorizedTx=${transactions.?[categoryId != null]}">
+                      th:with="uncategorizedTx=${transactions.?[!categorized]}, categorizedTx=${transactions.?[categorized]}">
 
                 <div class="tx-tabs">
                     <button type="button" class="tx-tab active" data-tx-tab="uncategorized"

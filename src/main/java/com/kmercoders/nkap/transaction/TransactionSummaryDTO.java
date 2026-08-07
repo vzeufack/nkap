@@ -49,4 +49,17 @@ public class TransactionSummaryDTO {
     public Long getCategoryId()                { return categoryId; }
     public Long getAccountId()                 { return accountId; }
     public Long getBudgetId()                  { return budgetId; }
+
+    /**
+     * Whether this transaction should be treated as "categorized" for display purposes.
+     * A transaction linked to a category counts, but so do system-generated ADJUSTMENT
+     * and TRANSFER transactions (account/category balance adjustments, category-to-category
+     * transfers) — these never carry a user-assigned category, yet don't need the user's
+     * attention the way a regular uncategorized transaction does.
+     */
+    public boolean isCategorized() {
+        return categoryId != null
+            || transactionType == TransactionType.ADJUSTMENT
+            || transactionType == TransactionType.TRANSFER;
+    }
 }
