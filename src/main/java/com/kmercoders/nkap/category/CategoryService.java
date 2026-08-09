@@ -6,18 +6,30 @@ import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
 import com.kmercoders.nkap.group.Group;
 import com.kmercoders.nkap.group.GroupRepository;
+import com.kmercoders.nkap.transaction.Direction;
+import com.kmercoders.nkap.transaction.Transaction;
 import com.kmercoders.nkap.transaction.TransactionRepository;
 import com.kmercoders.nkap.transaction.TransactionService;
+import com.kmercoders.nkap.transaction.TransactionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class CategoryService {
+
+    private static final BigDecimal ZERO_AMOUNT = new BigDecimal("0.00");
 
     private final CategoryRepository categoryRepository;
     private final BudgetCategoryRepository budgetCategoryRepository;
@@ -147,6 +159,161 @@ public class CategoryService {
         transactionService.createCategoryTransfer(budget, source, target, request.getAmount());
 
         return new CategoryTransferResponse(CategoryDTO.from(source), CategoryDTO.from(target));
+    }
+
+    @Transactional
+    public AutoAllocateResponse autoAllocateIncome(Long budgetId) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        Budget budget = budgetRepository.findByIdAndAppUserId(budgetId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
+
+        AllocationPlan plan = buildAllocationPlan(budget);
+        for (AllocationPlanEntry entry : plan.entries()) {
+            transactionService.createCategoryTransfer(budget, entry.source(), entry.target(), entry.amount());
+        }
+
+        return new AutoAllocateResponse(plan.totalAllocated(), plan.entries().size(), plan.remainingUnallocated());
+    }
+
+    /**
+     * Whether an auto-allocate run against this budget would move any money right now - i.e.
+     * there's realized income sitting unallocated in an income category AND at least one
+     * expense category hasn't yet received its full planned allocation from income. Used to
+     * drive the auto-allocate button's disabled state.
+     */
+    public boolean hasFundsToAutoAllocate(Budget budget) {
+        return !buildAllocationPlan(budget).entries().isEmpty();
+    }
+
+    private AllocationPlan buildAllocationPlan(Budget budget) {
+        Comparator<BudgetCategory> byGroupThenCategoryName = Comparator
+            .<BudgetCategory, String>comparing(bc -> bc.getCategory().getGroup().getName(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(bc -> bc.getCategory().getName(), String.CASE_INSENSITIVE_ORDER);
+
+        List<BudgetCategory> budgetCategories = budgetCategoryRepository.findByBudgetId(budget.getId());
+
+        List<BudgetCategory> incomeCategories = budgetCategories.stream()
+            .filter(bc -> bc.getCategory().getGroup().isDefault())
+            .sorted(byGroupThenCategoryName)
+            .toList();
+
+        List<BudgetCategory> expenseCategories = budgetCategories.stream()
+            .filter(bc -> !bc.getCategory().getGroup().isDefault())
+            .sorted(byGroupThenCategoryName)
+            .toList();
+
+        if (incomeCategories.isEmpty() || expenseCategories.isEmpty()) {
+            return new AllocationPlan(List.of(), ZERO_AMOUNT, ZERO_AMOUNT);
+        }
+
+        List<BigDecimal> incomeAvailable = incomeCategories.stream()
+            .map(bc -> bc.getCategory().getBalance().max(BigDecimal.ZERO))
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        BigDecimal pool = incomeAvailable.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (pool.compareTo(BigDecimal.ZERO) <= 0) {
+            return new AllocationPlan(List.of(), ZERO_AMOUNT, ZERO_AMOUNT);
+        }
+
+        Map<Long, BigDecimal> netFundedFromIncome =
+            computeNetFundedFromIncome(budget.getId(), incomeCategories, expenseCategories);
+
+        List<AllocationPlanEntry> entries = new ArrayList<>();
+        BigDecimal totalAllocated = BigDecimal.ZERO;
+        int incomeIndex = 0;
+
+        for (BudgetCategory expense : expenseCategories) {
+            BigDecimal remainingNeed = expense.getAllocation()
+                .subtract(netFundedFromIncome.getOrDefault(expense.getId(), BigDecimal.ZERO));
+
+            while (remainingNeed.compareTo(BigDecimal.ZERO) > 0 && incomeIndex < incomeCategories.size()) {
+                BigDecimal available = incomeAvailable.get(incomeIndex);
+                if (available.compareTo(BigDecimal.ZERO) <= 0) {
+                    incomeIndex++;
+                    continue;
+                }
+
+                BigDecimal amount = remainingNeed.min(available);
+                entries.add(new AllocationPlanEntry(incomeCategories.get(incomeIndex), expense, amount));
+
+                incomeAvailable.set(incomeIndex, available.subtract(amount));
+                remainingNeed = remainingNeed.subtract(amount);
+                totalAllocated = totalAllocated.add(amount);
+
+                if (incomeAvailable.get(incomeIndex).compareTo(BigDecimal.ZERO) <= 0) {
+                    incomeIndex++;
+                }
+            }
+
+            if (incomeIndex >= incomeCategories.size()) {
+                break;
+            }
+        }
+
+        BigDecimal remainingUnallocated = pool.subtract(totalAllocated);
+        return new AllocationPlan(entries, totalAllocated, remainingUnallocated);
+    }
+
+    private record AllocationPlanEntry(BudgetCategory source, BudgetCategory target, BigDecimal amount) {}
+
+    private record AllocationPlan(List<AllocationPlanEntry> entries, BigDecimal totalAllocated, BigDecimal remainingUnallocated) {}
+
+    /**
+     * For every past TRANSFER (whether created by a manual category transfer or a previous
+     * auto-allocate run) that moved money between an income category and an expense category,
+     * nets the signed amount at the expense category's leg. This is deliberately based on
+     * transfer history rather than the expense category's current balance, since balance is
+     * also reduced by spending - using it would make an already-spent-down category look like
+     * it still needs funding from income.
+     */
+    private Map<Long, BigDecimal> computeNetFundedFromIncome(
+            Long budgetId, List<BudgetCategory> incomeCategories, List<BudgetCategory> expenseCategories) {
+
+        Set<Long> incomeIds = incomeCategories.stream().map(BudgetCategory::getId).collect(Collectors.toSet());
+        Set<Long> expenseIds = expenseCategories.stream().map(BudgetCategory::getId).collect(Collectors.toSet());
+
+        List<Transaction> transferLegs =
+            transactionRepository.findByBudgetIdAndTransactionType(budgetId, TransactionType.TRANSFER);
+
+        Map<UUID, List<Transaction>> legsByTransferId = transferLegs.stream()
+            .filter(t -> t.getTransferId() != null)
+            .collect(Collectors.groupingBy(Transaction::getTransferId));
+
+        Map<Long, BigDecimal> netFundedFromIncome = new HashMap<>();
+
+        for (List<Transaction> legs : legsByTransferId.values()) {
+            if (legs.size() != 2) {
+                continue; // defensive; category transfers always create exactly 2 legs
+            }
+
+            Transaction legA = legs.get(0);
+            Transaction legB = legs.get(1);
+            Transaction expenseLeg = null;
+
+            if (isInCategorySet(legA, incomeIds) && isInCategorySet(legB, expenseIds)) {
+                expenseLeg = legB;
+            } else if (isInCategorySet(legB, incomeIds) && isInCategorySet(legA, expenseIds)) {
+                expenseLeg = legA;
+            }
+
+            if (expenseLeg == null) {
+                continue; // both legs on the same side (or unrelated) - not an income-to-expense transfer
+            }
+
+            BigDecimal signedAmount = expenseLeg.getDirection() == Direction.CREDIT
+                ? expenseLeg.getAmount()
+                : expenseLeg.getAmount().negate();
+
+            netFundedFromIncome.merge(expenseLeg.getBudgetCategory().getId(), signedAmount, BigDecimal::add);
+        }
+
+        return netFundedFromIncome;
+    }
+
+    private boolean isInCategorySet(Transaction transaction, Set<Long> budgetCategoryIds) {
+        return transaction.getBudgetCategory() != null
+            && budgetCategoryIds.contains(transaction.getBudgetCategory().getId());
     }
 
     @Transactional

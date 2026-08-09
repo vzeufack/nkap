@@ -1054,6 +1054,31 @@ html, body {
     opacity: 0.35;
 }
 
+.btn-auto-allocate {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    margin-right: 8px;
+    border-radius: 14px;
+    border: 1.5px solid var(--nkap-blue);
+    background: transparent;
+    color: var(--nkap-blue);
+    transition: all 0.15s ease;
+}
+
+.btn-auto-allocate:hover:not(:disabled) {
+    background: var(--nkap-blue-light);
+}
+
+.btn-auto-allocate:disabled {
+    cursor: not-allowed;
+    color: var(--text-muted);
+    border-color: var(--panel-border);
+    opacity: 0.6;
+}
+
 .group-card-empty-note {
     font-size: 0.82rem;
     font-family: sans-serif;

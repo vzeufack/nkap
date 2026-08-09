@@ -95,6 +95,15 @@
                                     <span class="group-card-badge" th:if="${group.isDefault()}">Default</span>
                                 </div>
                                 <div class="group-card-actions ml-auto">
+                                    <button class="btn-auto-allocate"
+                                            id="btnAutoAllocate"
+                                            th:if="${group.isDefault()}"
+                                            th:disabled="${canAutoAllocate == null or !canAutoAllocate}"
+                                            onclick="autoAllocateIncome()"
+                                            title="Move available income into underfunded categories">
+                                        <span class="spinner-border spinner-border-sm d-none mr-1" id="btnAutoAllocateSpinner" role="status" aria-hidden="true"></span>
+                                        <i class="fas fa-magic mr-1" id="btnAutoAllocateIcon"></i>Auto Allocate
+                                    </button>
                                     <button class="btn-icon btn-edit-group"
                                             th:if="${!group.isDefault()}"
                                             th:attr="onclick='openEditGroupModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"

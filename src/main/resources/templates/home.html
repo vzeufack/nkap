@@ -1563,6 +1563,49 @@
             btn.disabled = false;
         });
     }
+
+    // ── Auto-allocate available income to underfunded expense categories ──
+    function autoAllocateIncome() {
+        if (!confirm('Allocate your available income to underfunded categories?')) return;
+
+        var budgetContent = document.querySelector('[data-budget-id]');
+        if (!budgetContent) { console.error('No budget id found'); return; }
+        var budgetId = budgetContent.getAttribute('data-budget-id');
+
+        var spinner = document.getElementById('btnAutoAllocateSpinner');
+        var icon    = document.getElementById('btnAutoAllocateIcon');
+        var btn     = document.getElementById('btnAutoAllocate');
+        spinner.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+
+        fetch('/budgets/' + budgetId + '/categories/auto-allocate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(function(response) {
+            if (response.ok) return response.json();
+            return response.json().then(function(errs) { throw errs; });
+        })
+        .then(function(result) {
+            if (result.transfersCreated > 0) {
+                alert('Allocated $' + Number(result.totalAllocated).toFixed(2)
+                    + ' across ' + result.transfersCreated + ' categor' + (result.transfersCreated === 1 ? 'y' : 'ies') + '.');
+                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
+            } else {
+                alert('Nothing to allocate right now.');
+            }
+        })
+        .catch(function(err) {
+            alert(err && err.message ? err.message : 'Something went wrong. Please try again.');
+            console.error('Error auto-allocating income:', err);
+        })
+        .finally(function() {
+            spinner.classList.add('d-none');
+            icon.classList.remove('d-none');
+            btn.disabled = false;
+        });
+    }
 </script>
 
 </body>

@@ -35,4 +35,9 @@ public class CategoryTransferController {
 
         return ResponseEntity.ok(categoryService.transferBalance(budgetId, request));
     }
+
+    @PostMapping("/auto-allocate")
+    public ResponseEntity<?> autoAllocate(@PathVariable("budgetId") Long budgetId) {
+        return ResponseEntity.ok(categoryService.autoAllocateIncome(budgetId));
+    }
 }

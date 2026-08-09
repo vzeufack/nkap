@@ -183,6 +183,7 @@ public class BudgetController {
         model.addAttribute("planDifference", plannedIncome.subtract(plannedExpenses).abs());
         model.addAttribute("planStatus", planStatus);
         model.addAttribute("spentSoFar", spentSoFar);
+        model.addAttribute("canAutoAllocate", categoryService.hasFundsToAutoAllocate(budget));
     }
 
     private void addAccountAttributes(Model model) {

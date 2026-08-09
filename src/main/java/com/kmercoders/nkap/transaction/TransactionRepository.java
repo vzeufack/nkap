@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByAccountId(Long accountId);
     List<Transaction> findByBudgetId(Long budgetId);
+    List<Transaction> findByBudgetIdAndTransactionType(Long budgetId, TransactionType transactionType);
     List<Transaction> findByBudgetIdOrderByTransactionDateDesc(Long budgetId);
     Optional<Transaction> findByIdAndBudgetAppUserId(Long id, Long appUserId);
     List<Transaction> findByTransferId(UUID transferId);
