@@ -10,6 +10,7 @@ import com.kmercoders.nkap.financialinstitution.FinancialInstitutionService;
 import com.kmercoders.nkap.transaction.Direction;
 import com.kmercoders.nkap.transaction.TransactionService;
 import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
+import com.kmercoders.nkap.transaction.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -161,6 +162,7 @@ public class BudgetController {
         }
 
         BigDecimal spentSoFar = transactions.stream()
+            .filter(tx -> tx.getTransactionType() == TransactionType.STANDARD)
             .filter(tx -> tx.getCategoryId() != null && expenseCategoryIds.contains(tx.getCategoryId()))
             .map(tx -> tx.getDirection() == Direction.DEBIT ? tx.getAmount() : tx.getAmount().negate())
             .reduce(BigDecimal.ZERO, BigDecimal::add);
