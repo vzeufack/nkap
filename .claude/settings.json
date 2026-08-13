@@ -113,7 +113,8 @@
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.category.*\")",
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew build)",
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.category.*\" --tests \"com.kmercoders.nkap.budget.*\")",
-      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.budget.*\" -q)"
+      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.budget.*\" -q)",
+      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew build -x test --console=plain)"
     ],
     "additionalDirectories": [
       "/tmp"

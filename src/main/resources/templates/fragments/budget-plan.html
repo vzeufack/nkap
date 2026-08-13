@@ -106,7 +106,8 @@
                                     </button>
                                     <button class="btn-icon btn-edit-group"
                                             th:if="${!group.isDefault()}"
-                                            th:attr="onclick='openEditGroupModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"
+                                            onclick="openEditGroupModal(this)"
+                                            th:attr="data-group-id=${group.id}, data-group-name=${group.name}"
                                             title="Rename group">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -160,7 +161,13 @@
                                                         th:text="${'$' + #numbers.formatDecimal(bc.category.balance, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
                                                     <td class="cat-action">
                                                         <button class="btn-icon btn-edit-category"
-                                                                th:attr="onclick='openEditCategoryModal(' + ${bc.category.id} + ', \'' + ${group.id} + '\', \'' + ${group.name} + '\', \'' + ${bc.category.name} + '\', ' + ${bc.allocation} + ', ' + ${bc.category.balance} + ')'"
+                                                                onclick="openEditCategoryModal(this)"
+                                                                th:attr="data-category-id=${bc.category.id},
+                                                                         data-group-id=${group.id},
+                                                                         data-group-name=${group.name},
+                                                                         data-name=${bc.category.name},
+                                                                         data-allocation=${bc.allocation},
+                                                                         data-balance=${bc.category.balance}"
                                                                 title="Edit category">
                                                             <i class="fas fa-pencil-alt"></i>
                                                         </button>
@@ -211,7 +218,8 @@
                             <!-- Card footer: add category -->
                             <div class="group-card-footer">
                                 <button class="btn-add-category"
-                                        th:attr="onclick='openAddCategoryModal(' + ${group.id} + ', \'' + ${group.name} + '\')'"
+                                        onclick="openAddCategoryModal(this)"
+                                        th:attr="data-group-id=${group.id}, data-group-name=${group.name}"
                                         title="Add category">
                                     <i class="fas fa-plus mr-1"></i>Add Category
                                 </button>
@@ -394,15 +402,15 @@
         }
 
         // ── Group: Edit mode ──────────────────────────────────
-        function openEditGroupModal(groupId, currentName) {
+        function openEditGroupModal(btn) {
             var modal = document.getElementById('addGroupModal');
-            modal.setAttribute('data-edit-group-id', groupId);
+            modal.setAttribute('data-edit-group-id', btn.dataset.groupId);
             document.getElementById('groupModalTitle').textContent     = 'Rename Group';
             document.getElementById('groupModalDesc').textContent      = 'Enter a new name for this group.';
             document.getElementById('groupModalSaveLabel').textContent = 'Save Changes';
 
             var input = document.getElementById('groupNameInput');
-            input.value = currentName;
+            input.value = btn.dataset.groupName;
             input.classList.remove('is-invalid');
             document.getElementById('groupNameError').textContent = '';
             $('#addGroupModal').modal('show');
@@ -468,33 +476,33 @@
         }
 
         // ── Category: Add mode ────────────────────────────────
-        function openAddCategoryModal(groupId, groupName) {
+        function openAddCategoryModal(btn) {
             var modal = document.getElementById('addCategoryModal');
             modal.removeAttribute('data-edit-category-id');
-            modal.setAttribute('data-group-id', groupId);
+            modal.setAttribute('data-group-id', btn.dataset.groupId);
 
             document.getElementById('categoryModalTitle').textContent     = 'New Category';
             document.getElementById('categoryModalSaveLabel').textContent = 'Save Category';
-            document.getElementById('categoryGroupLabel').textContent     = groupName;
+            document.getElementById('categoryGroupLabel').textContent     = btn.dataset.groupName;
 
             resetCategoryForm();
             $('#addCategoryModal').modal('show');
         }
 
         // ── Category: Edit mode ───────────────────────────────
-        function openEditCategoryModal(categoryId, groupId, groupName, name, allocation, balance) {
+        function openEditCategoryModal(btn) {
             var modal = document.getElementById('addCategoryModal');
-            modal.setAttribute('data-edit-category-id', categoryId);
-            modal.setAttribute('data-group-id', groupId);
+            modal.setAttribute('data-edit-category-id', btn.dataset.categoryId);
+            modal.setAttribute('data-group-id', btn.dataset.groupId);
 
             document.getElementById('categoryModalTitle').textContent     = 'Edit Category';
             document.getElementById('categoryModalSaveLabel').textContent = 'Save Changes';
-            document.getElementById('categoryGroupLabel').textContent     = groupName;
+            document.getElementById('categoryGroupLabel').textContent     = btn.dataset.groupName;
 
             resetCategoryForm();
-            document.getElementById('categoryNameInput').value       = name;
-            document.getElementById('categoryAllocationInput').value = allocation;
-            document.getElementById('categoryBalanceInput').value    = balance;
+            document.getElementById('categoryNameInput').value       = btn.dataset.name;
+            document.getElementById('categoryAllocationInput').value = btn.dataset.allocation;
+            document.getElementById('categoryBalanceInput').value    = btn.dataset.balance;
 
             $('#addCategoryModal').modal('show');
         }
