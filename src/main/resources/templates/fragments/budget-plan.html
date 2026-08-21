@@ -115,7 +115,7 @@
                                           title="Default group cannot be renamed">
                                         <i class="fas fa-lock"></i>
                                     </span>
-                                    <span class="group-delete-tooltip-wrap"
+                                    <span class="group-delete-tooltip-wrap icon-btn-tooltip-wrap"
                                           th:if="${!group.isDefault() and hasCategories}"
                                           title="Cannot delete: group has categories linked to it">
                                         <button class="btn-icon btn-delete-group" disabled="disabled">
@@ -173,7 +173,7 @@
                                                         </button>
                                                     </td>
                                                     <td class="cat-action">
-                                                        <span class="cat-delete-tooltip-wrap"
+                                                        <span class="cat-delete-tooltip-wrap icon-btn-tooltip-wrap"
                                                               th:if="${hasTransactions or hasBalance}"
                                                               th:title="${(hasTransactions and hasBalance) ? 'Cannot delete: category has transactions and a non-zero balance' : (hasTransactions ? 'Cannot delete: category has transactions linked to it' : 'Cannot delete: category balance must be $0.00')}">
                                                             <button class="btn-icon btn-delete-category" disabled="disabled">
@@ -191,7 +191,7 @@
                                                         </button>
                                                     </td>
                                                     <td class="cat-action">
-                                                        <span class="cat-transfer-tooltip-wrap"
+                                                        <span class="cat-transfer-tooltip-wrap icon-btn-tooltip-wrap"
                                                               th:if="${bc.category.balance <= 0}"
                                                               title="No balance available to transfer">
                                                             <button class="btn-icon btn-transfer-category" disabled="disabled">
@@ -430,9 +430,8 @@
                 return;
             }
 
-            var budgetContent = document.querySelector('[data-budget-id]');
-            if (!budgetContent) { console.error('No budget id found'); return; }
-            var budgetId = budgetContent.getAttribute('data-budget-id');
+            var budgetId = Nkap.ui.getBudgetId();
+            if (!budgetId) { console.error('No budget id found'); return; }
 
             var modal       = document.getElementById('addGroupModal');
             var editGroupId = modal.getAttribute('data-edit-group-id');
@@ -443,36 +442,21 @@
                 : '/budgets/' + budgetId + '/groups';
             var method = isEdit ? 'PUT' : 'POST';
 
-            var spinner = document.getElementById('btnSaveGroupSpinner');
-            var icon    = document.getElementById('btnSaveGroupIcon');
-            var btn     = document.getElementById('btnSaveGroup');
-            spinner.classList.remove('d-none');
-            icon.classList.add('d-none');
-            btn.disabled = true;
+            Nkap.ui.setBusy('btnSaveGroup', 'btnSaveGroupSpinner', 'btnSaveGroupIcon', true);
 
-            fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name })
-            })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Request failed: ' + response.status);
-                return response.json();
-            })
-            .then(function() {
-                $('#addGroupModal').modal('hide');
-                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
-            })
-            .catch(function(err) {
-                console.error('Error saving group:', err);
-                input.classList.add('is-invalid');
-                errorEl.textContent = 'Something went wrong. Please try again.';
-            })
-            .finally(function() {
-                spinner.classList.add('d-none');
-                icon.classList.remove('d-none');
-                btn.disabled = false;
-            });
+            Nkap.http.postJson(url, method, { name: name })
+                .then(function() {
+                    $('#addGroupModal').modal('hide');
+                    Nkap.ui.dispatchGroupSaved();
+                })
+                .catch(function(err) {
+                    console.error('Error saving group:', err);
+                    input.classList.add('is-invalid');
+                    errorEl.textContent = 'Something went wrong. Please try again.';
+                })
+                .finally(function() {
+                    Nkap.ui.setBusy('btnSaveGroup', 'btnSaveGroupSpinner', 'btnSaveGroupIcon', false);
+                });
         }
 
         // ── Category: Add mode ────────────────────────────────
@@ -563,9 +547,8 @@
 
             if (!valid) return;
 
-            var budgetContent = document.querySelector('[data-budget-id]');
-            if (!budgetContent) { console.error('No budget id found'); return; }
-            var budgetId = budgetContent.getAttribute('data-budget-id');
+            var budgetId = Nkap.ui.getBudgetId();
+            if (!budgetId) { console.error('No budget id found'); return; }
 
             var modal          = document.getElementById('addCategoryModal');
             var groupId        = modal.getAttribute('data-group-id');
@@ -577,54 +560,32 @@
                 : '/budgets/' + budgetId + '/groups/' + groupId + '/categories';
             var method = isEdit ? 'PUT' : 'POST';
 
-            var spinner = document.getElementById('btnSaveCategorySpinner');
-            var icon    = document.getElementById('btnSaveCategoryIcon');
-            var btn     = document.getElementById('btnSaveCategory');
-            spinner.classList.remove('d-none');
-            icon.classList.add('d-none');
-            btn.disabled = true;
+            Nkap.ui.setBusy('btnSaveCategory', 'btnSaveCategorySpinner', 'btnSaveCategoryIcon', true);
 
             var payload = { name: name, allocation: allocation };
             if (balance !== null) payload.balance = balance;
 
-            fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(function(response) {
-                if (response.ok) return response.json();
-                return response.json().then(function(errs) { throw errs; });
-            })
-            .then(function() {
-                $('#addCategoryModal').modal('hide');
-                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
-            })
-            .catch(function(err) {
-                if (err && typeof err === 'object' && !err.message) {
-                    if (err.name) {
+            Nkap.http.postJson(url, method, payload)
+                .then(function() {
+                    $('#addCategoryModal').modal('hide');
+                    Nkap.ui.dispatchGroupSaved();
+                })
+                .catch(function(err) {
+                    if (err && typeof err === 'object' && !err.message) {
+                        Nkap.forms.applyFieldErrors(err, {
+                            name:       { inputId: 'categoryNameInput', errorId: 'categoryNameError' },
+                            allocation: { inputId: 'categoryAllocationInput', errorId: 'categoryAllocationError' },
+                            balance:    { inputId: 'categoryBalanceInput', errorId: 'categoryBalanceError' }
+                        });
+                    } else {
                         nameInput.classList.add('is-invalid');
-                        nameError.textContent = err.name;
+                        nameError.textContent = 'Something went wrong. Please try again.';
                     }
-                    if (err.allocation) {
-                        allocationInput.classList.add('is-invalid');
-                        allocationError.textContent = err.allocation;
-                    }
-                    if (err.balance) {
-                        balanceInput.classList.add('is-invalid');
-                        balanceError.textContent = err.balance;
-                    }
-                } else {
-                    nameInput.classList.add('is-invalid');
-                    nameError.textContent = 'Something went wrong. Please try again.';
-                }
-                console.error('Error saving category:', err);
-            })
-            .finally(function() {
-                spinner.classList.add('d-none');
-                icon.classList.remove('d-none');
-                btn.disabled = false;
-            });
+                    console.error('Error saving category:', err);
+                })
+                .finally(function() {
+                    Nkap.ui.setBusy('btnSaveCategory', 'btnSaveCategorySpinner', 'btnSaveCategoryIcon', false);
+                });
         }
 
         // ── Category: Delete ───────────────────────────────────
@@ -636,18 +597,15 @@
             var categoryId = btn.getAttribute('data-category-id');
             btn.disabled = true;
 
-            fetch('/budgets/' + budgetId + '/groups/' + groupId + '/categories/' + categoryId, {
-                method: 'DELETE'
-            })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Request failed: ' + response.status);
-                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
-            })
-            .catch(function(err) {
-                console.error('Error deleting category:', err);
-                alert('Could not delete this category. It may have transactions linked to it or a non-zero balance.');
-                btn.disabled = false;
-            });
+            Nkap.http.del('/budgets/' + budgetId + '/groups/' + groupId + '/categories/' + categoryId)
+                .then(function() {
+                    Nkap.ui.dispatchGroupSaved();
+                })
+                .catch(function(err) {
+                    console.error('Error deleting category:', err);
+                    alert('Could not delete this category. It may have transactions linked to it or a non-zero balance.');
+                    btn.disabled = false;
+                });
         }
 
         // ── Group: Delete ──────────────────────────────────────
@@ -658,18 +616,15 @@
             var groupId  = btn.getAttribute('data-group-id');
             btn.disabled = true;
 
-            fetch('/budgets/' + budgetId + '/groups/' + groupId, {
-                method: 'DELETE'
-            })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Request failed: ' + response.status);
-                document.dispatchEvent(new CustomEvent('nkap:groupSaved'));
-            })
-            .catch(function(err) {
-                console.error('Error deleting group:', err);
-                alert('Could not delete this group. It may have categories linked to it.');
-                btn.disabled = false;
-            });
+            Nkap.http.del('/budgets/' + budgetId + '/groups/' + groupId)
+                .then(function() {
+                    Nkap.ui.dispatchGroupSaved();
+                })
+                .catch(function(err) {
+                    console.error('Error deleting group:', err);
+                    alert('Could not delete this group. It may have categories linked to it.');
+                    btn.disabled = false;
+                });
         }
 
         /*]]>*/

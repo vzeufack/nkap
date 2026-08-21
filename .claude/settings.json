@@ -114,7 +114,22 @@
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew build)",
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.category.*\" --tests \"com.kmercoders.nkap.budget.*\")",
       "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test --tests \"com.kmercoders.nkap.budget.*\" -q)",
-      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew build -x test --console=plain)"
+      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew build -x test --console=plain)",
+      "Bash(grep -n \"Modal event bindings\\\\|^<script>$\\\\|^</script>$\\\\|^</body>$\" /home/vannel/Documents/nkap/src/main/resources/templates/home.html)",
+      "Bash(./gradlew build *)",
+      "Bash(command -v psql)",
+      "Bash(pg_lsclusters)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew bootRun)",
+      "Bash(echo \"PID=$!\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"check now: %{http_code}\\\\n\" http://localhost:8080/login)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:8080/js/budget.js)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:8080/css/budget.css)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:8080/js/nkap-core.js)",
+      "Bash(curl -s -D - -o /tmp/register-resp2.html -X POST http://localhost:8080/register -d 'email=refactor-test2@example.com&password=Password123!' -w '\\\\n%{http_code}\\\\n')",
+      "Bash(grep -i \"error\\\\|exception\" /tmp/nkap-bootrun.log | grep -v \"ResponseStatusException\\\\|Bad Request\\\\|400 BAD_REQUEST\" | tail -20 *)",
+      "Bash(curl -s -o /dev/null -w \"post-shutdown check: %{http_code}\\\\n\" http://localhost:8080/login --max-time 2)"
     ],
     "additionalDirectories": [
       "/tmp"

@@ -1,0 +1,50 @@
+/* budget-foundation.css — shared tokens, base reset, and cross-page base classes.
+   Loaded first: every other budget-*.css file references these custom properties. */
+
+/* ── Shared tokens ── */
+:root {
+    --nkap-blue:        #24a0ed;
+    --nkap-blue-dark:   #1a7fc0;
+    --nkap-blue-light:  #e8f4fd;
+    --nkap-green:       #27ae60;
+    --nkap-red:         #e74c3c;
+    --nkap-orange:      #f39c12;
+    --sidebar-bg:       #f8f9fa;
+    --sidebar-border:   #e3e8ef;
+    --header-height:    64px;
+    --text-muted:       #8a9bb0;
+    --text-dark:        #2c3e50;
+    --panel-bg:         #ffffff;
+    --panel-border:     #e3e8ef;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Bree Serif', serif;
+    background-color: #f0f4f8;
+    color: var(--text-dark);
+}
+
+/* ── Utility ── */
+.bree-serif {
+    font-family: 'Bree Serif', serif;
+    font-weight: bold;
+}
+
+/* ══════════════════════════════════════════
+   ROW 2 — MAIN CONTENT
+══════════════════════════════════════════ */
+.content-row {
+    height: calc(100vh - var(--header-height));
+    overflow: hidden;
+}
+
+/* Wrapper needed so the tooltip still shows on hover — disabled buttons
+   don't receive mouse events, so the title must live on the parent span.
+   Shared box-shape for all "disabled icon button with tooltip" wrappers;
+   the per-context hover-opacity rule stays with the wrapper's own class
+   (and the accounts sidebar variant adds its own flex-shrink: 0). */
+.icon-btn-tooltip-wrap {
+    display: inline-block;
+}

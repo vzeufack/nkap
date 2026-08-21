@@ -1,0 +1,15 @@
+/* budget-vendor-overrides.css — Bootstrap datepicker theming overrides. */
+
+.datepicker table tr td.active,
+.datepicker table tr td.active:hover,
+.datepicker table tr td span.active,
+.datepicker table tr td span.active:hover {
+    background-color: var(--nkap-blue) !important;
+    border-color: var(--nkap-blue) !important;
+}
+
+.datepicker table tr td:hover,
+.datepicker table tr td span:hover {
+    background: var(--nkap-blue-light);
+    color: var(--nkap-blue-dark);
+}
