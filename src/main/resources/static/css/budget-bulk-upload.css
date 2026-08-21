@@ -1,0 +1,67 @@
+/* budget-bulk-upload.css — Bulk Upload modal's preview table, budgets note, and error list. */
+
+.upload-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: sans-serif;
+    font-size: 0.82rem;
+}
+
+.upload-preview-table thead tr {
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--panel-border);
+    position: sticky;
+    top: 0;
+}
+
+.upload-preview-table thead th {
+    padding: 7px 12px;
+    font-family: 'Bree Serif', serif;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+.upload-preview-table tbody tr {
+    border-bottom: 1px solid #f0f4f8;
+    transition: background 0.12s;
+}
+
+.upload-preview-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.upload-preview-table tbody tr:hover {
+    background: var(--nkap-blue-light);
+}
+
+.upload-preview-table td {
+    padding: 8px 12px;
+    color: var(--text-dark);
+}
+
+.upload-preview-table td.amount-debit {
+    color: var(--nkap-red);
+}
+
+.upload-budgets-note {
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: var(--nkap-blue-light);
+    color: var(--text-dark);
+    font-size: 0.85rem;
+}
+
+.upload-error-list {
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: #fdecea;
+    color: var(--nkap-red);
+    font-size: 0.85rem;
+}
+
+.upload-error-list ul {
+    padding-left: 18px;
+}

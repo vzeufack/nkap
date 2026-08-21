@@ -24,7 +24,7 @@
                         onclick="openEditAccountModal(this)">
                     <i class="fas fa-pen"></i>
                 </button>
-                <span class="account-delete-tooltip-wrap"
+                <span class="account-delete-tooltip-wrap icon-btn-tooltip-wrap"
                       th:if="${hasTransactions or hasBalance}"
                       th:title="${(hasTransactions and hasBalance) ? 'Cannot delete: account has transactions and a non-zero balance' : (hasTransactions ? 'Cannot delete: account has transactions linked to it' : 'Cannot delete: balance must be $0.00')}">
                     <button class="btn-icon account-delete-btn" disabled="disabled">

@@ -1,4 +1,7 @@
-/* budget.js — nkap budgeting page */
+/* nkap-month-nav.js — month navigation (picker, prev/next/today, browser back/forward)
+ * and cross-fragment sync (accounts sidebar refresh, transaction-modal category dropdown,
+ * budget id) after group/category/account/transaction mutations.
+ */
 
 $(document).ready(function () {
 
@@ -141,34 +144,7 @@ $(document).ready(function () {
     function rebuildCategoryDropdown() {
         const sel = document.getElementById('txCategorySelect');
         if (!sel) return;
-
-        const currentVal = sel.value;
-
-        while (sel.children.length > 1) sel.lastChild.remove();
-
-        document.querySelectorAll('#budget-plan-container .group-card').forEach(function(card) {
-            const nameEl = card.querySelector('.group-card-name');
-            const rows   = card.querySelectorAll('.cat-row[data-category-id]');
-            if (!nameEl || rows.length === 0) return;
-
-            const optgroup  = document.createElement('optgroup');
-            optgroup.label = nameEl.textContent.trim();
-
-            rows.forEach(function(row) {
-                const catId   = row.dataset.categoryId;
-                const catName = row.querySelector('.cat-name');
-                if (!catId || !catName) return;
-
-                const opt = document.createElement('option');
-                opt.value       = catId;
-                opt.textContent = catName.textContent.trim();
-                optgroup.appendChild(opt);
-            });
-
-            sel.appendChild(optgroup);
-        });
-
-        if (currentVal) sel.value = currentVal;
+        Nkap.ui.buildCategoryOptions(sel, { clearAll: false, includeBalance: false });
     }
 
 });
