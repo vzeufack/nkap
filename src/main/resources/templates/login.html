@@ -1,41 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://thymeleaf.org">
 	<head>
 		<title>Login</title>
 		<div th:replace="~{fragments/header :: css}"></div>
+		<link rel="stylesheet" href="/css/budget-foundation.css"/>
 		<link rel="stylesheet" href="/css/authentication.css"/>
 	</head>
-	<body>
-		<div class="container">
-		 	<div class="card mx-auto">
-			  <div class="card-header bree-serif">
-			  	<h2>Welcome to Nkap <i class='fas fa-coins'></i></h2>
-			  	<h5>Your personal budgeting assitant</h5>
-			  </div>
-			  <div class="card-body">
-				 <form th:action="@{/login}" th:object="${appUserDTO}" method="POST">
-			        <div th:if="${param.logout != null}">
-			           You have been logged out.
-			        </div>
-			        <div class = "form-group">
-				        <label for="email">Email</label>
-				        <input type="text" class="form-control" th:field="${appUserDTO.email}"/>
+	<body class="auth-page">
+		<div class="auth-shell">
+			<div class="card auth-form-card">
+				<h2 class="bree-serif">Welcome back</h2>
+				<p class="auth-lede">Log in to keep your budget on track.</p>
+
+				<div th:if="${param.logout != null}" class="auth-alert auth-alert-info">
+					You have been logged out.
+				</div>
+
+				<form th:action="@{/login}" th:object="${appUserDTO}" method="POST">
+					<div class="auth-field">
+						<label for="email">Email</label>
+						<input id="email" type="text" class="auth-input" th:field="${appUserDTO.email}"/>
 					</div>
-			        <div class = "form-group">
-				        <label for="password">Password</label>
-				        <input type="password" class="form-control" th:field="${appUserDTO.password}"/>
-			        </div>
-					<div th:if = "${param.error != null}" class="alert alert-danger">
-			            Invalid email or password!
-			        </div>
-			        <div class = "form-bottom">
-			            <button type="submit" class="btn btn-primary">Login</button>
-			            <p id="register-link">Don't have an account? <a href="/register">Register</a></p>
-			        </div>
-				 </form>
-			  </div>	  
-		 	</div>
+					<div class="auth-field">
+						<label for="password">Password</label>
+						<input id="password" type="password" class="auth-input" th:field="${appUserDTO.password}"/>
+					</div>
+
+					<div th:if="${param.error != null}" class="auth-alert auth-alert-error">
+						Invalid email or password!
+					</div>
+
+					<button type="submit" class="btn-auth-submit bree-serif">Log In</button>
+				</form>
+
+				<p class="auth-switch-link">Don't have an account? <a href="/register">Create one</a></p>
+			</div>
+
+			<div th:replace="~{fragments/auth-showcase :: showcase}"></div>
 		</div>
+
 		<div th:replace="~{fragments/header :: scripts}"></div>
 	</body>
 </html>

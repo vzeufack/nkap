@@ -3,39 +3,40 @@
 <head>
 	<title>Registration</title>
 	<th:block th:replace="~{fragments/header :: css}"></th:block>
+	<link rel="stylesheet" href="/css/budget-foundation.css"/>
 	<link rel="stylesheet" href="/css/authentication.css"/>
 </head>
-<body>
-	<div class = "container">
-		<div class="card mx-auto">
-		  <div class="card-header bree-serif">
-		  	<h2>Create an account</h2>
-		  </div>
-		  <div class="card-body">
-		    <form action = "/register" th:object="${appUserDTO}" method = "post">
-			  <div class="mb-3">
-			    <label for="email" class="form-label">Email</label>
-			    <input type="text" class="form-control" th:field="*{email}"
+<body class="auth-page">
+	<div class="auth-shell">
+		<div class="card auth-form-card">
+			<h2 class="bree-serif">Create your account</h2>
+			<p class="auth-lede">Start budgeting in minutes.</p>
+
+			<form action = "/register" th:object="${appUserDTO}" method = "post">
+			  <div class="auth-field" th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
+			    <label for="email">Email</label>
+			    <input id="email" type="text" class="auth-input" th:field="*{email}"
                			th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
-        		<div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" 
+        		<div class="auth-field-error" th:if="${#fields.hasErrors('email')}"
          				th:text="${#fields.errors('email')[0]}"></div>
 			  </div>
-			  <div class="mb-3">
-			    <label for="password" class="form-label">Password</label>
-			    <input type="password" class="form-control" th:field="*{password}"
+			  <div class="auth-field">
+			    <label for="password">Password</label>
+			    <input id="password" type="password" class="auth-input" th:field="*{password}"
                			th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"/>
-				<div class="invalid-feedback" th:if="${#fields.hasErrors('password')}" 
+				<div class="auth-field-error" th:if="${#fields.hasErrors('password')}"
          				th:text="${#fields.errors('password')[0]}"></div>
 			  </div>
-			  <div id="errorMsg" class="alert alert-danger" role="alert" th:if="${error}" th:text = "${error}"></div>
-			  <div class = "form-bottom">
-				  <button type="submit" class="btn btn-primary">Register</button>
-				  <p id="register-link">Already have an account? <a href="/login">Login</a></p>
-			  </div>
+			  <div id="errorMsg" class="auth-alert auth-alert-error" role="alert" th:if="${error}" th:text = "${error}"></div>
+			  <button type="submit" class="btn-auth-submit bree-serif">Create Account</button>
 			</form>
-		  </div>
+
+			<p class="auth-switch-link">Already have an account? <a href="/login">Log in</a></p>
 		</div>
+
+		<div th:replace="~{fragments/auth-showcase :: showcase}"></div>
 	</div>
+
 	<th:block th:replace="~{fragments/header :: scripts}"></th:block>
 	<script src="/js/authentication.js"></script>
 </body>
