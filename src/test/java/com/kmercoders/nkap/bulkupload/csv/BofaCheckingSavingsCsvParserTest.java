@@ -148,6 +148,34 @@ class BofaCheckingSavingsCsvParserTest {
     }
 
     @Test
+    void parse_withSingleDigitMonthAndDay_parsesCorrectly() {
+        String sample = """
+            Date,Description,Amount,Running Bal.
+            9/1/2026,"TapTap Send US 07/08 PMNT SENT 8339160670 DE","-18.35","3,120.24"
+            9/28/2026,"NEXTEP PAYROLL DES:PAYROLL ID:000680 INDN:VANNEL ZEUFACK CO ID:9946759001 PPD","2,997.13","5,856.25"
+            """;
+
+        List<ParsedTransactionRow> rows = parser.parse(new StringReader(sample));
+
+        assertThat(rows).hasSize(2);
+        assertThat(rows.get(0).transactionDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(rows.get(1).transactionDate()).isEqualTo(LocalDate.of(2026, 9, 28));
+    }
+
+    @Test
+    void parse_withInvalidMonth_recordsDateError() {
+        String sample = """
+            Date,Description,Amount,Running Bal.
+            13/01/2026,"TapTap Send US 07/08 PMNT SENT 8339160670 DE","-18.35","3,120.24"
+            """;
+
+        assertThatThrownBy(() -> parser.parse(new StringReader(sample)))
+            .isInstanceOf(CsvValidationException.class)
+            .satisfies(e -> assertThat(((CsvValidationException) e).getErrors())
+                .anyMatch(msg -> msg.contains("invalid date")));
+    }
+
+    @Test
     void parse_withWrongHeader_throwsValidationError() {
         String wrongFormat = "Posted Date,Reference Number,Payee,Address,Amount\n07/28/2026,123,Some Payee,Some City GA,-34.07\n";
 

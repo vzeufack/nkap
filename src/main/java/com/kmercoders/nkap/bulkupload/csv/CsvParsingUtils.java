@@ -13,7 +13,7 @@ import java.util.List;
 
 final class CsvParsingUtils {
 
-    static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("M/d/yyyy");
     static final DateTimeFormatter ISO_DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     static final CSVFormat CSV_FORMAT = CSVFormat.Builder.create(CSVFormat.DEFAULT)
@@ -42,7 +42,7 @@ final class CsvParsingUtils {
         return "Line " + fileLine + ": " + message;
     }
 
-    /** Returns null and records an error if {@code raw} isn't a valid MM/dd/yyyy date. */
+    /** Returns null and records an error if {@code raw} isn't a valid M/d/yyyy date (single- or double-digit month/day). */
     static LocalDate parseDateOrRecordError(String raw, int fileLine, List<String> errors) {
         return parseDateOrRecordError(raw, DATE_FORMAT, fileLine, errors);
     }
