@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
@@ -52,7 +53,7 @@ public class BulkUploadService {
         this.transactionService = transactionService;
     }
 
-    public BulkUploadPreviewResponse previewUpload(Long accountId, MultipartFile file) {
+    public BulkUploadPreviewResponse previewUpload(Long accountId, MultipartFile file, LocalDate startDate, LocalDate endDate) {
         AppUser appUser = appUserService.getAuthenticatedUser();
         Account account = resolveAccount(accountId, appUser);
         BulkUploadCsvParser parser = resolveParser(account);
@@ -60,18 +61,25 @@ public class BulkUploadService {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please select a CSV file to upload.");
         }
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date must be before end date.");
+        }
 
         List<ParsedTransactionRow> rows = parser.parse(readerFor(file));
-        List<ParsedTransactionRow> sortedRows = rows.stream()
+        List<ParsedTransactionRow> filteredRows = rows.stream()
+            .filter(row -> startDate == null || !row.transactionDate().isBefore(startDate))
+            .filter(row -> endDate == null || !row.transactionDate().isAfter(endDate))
+            .toList();
+        List<ParsedTransactionRow> sortedRows = filteredRows.stream()
             .sorted(Comparator.comparing(ParsedTransactionRow::transactionDate))
             .toList();
 
-        List<BudgetToCreateDTO> budgetsToCreate = distinctSortedMonths(rows).stream()
+        List<BudgetToCreateDTO> budgetsToCreate = distinctSortedMonths(filteredRows).stream()
             .filter(ym -> !budgetService.existsByAppUserAndMonthAndYear(appUser, ym.getMonth(), ym.getYear()))
             .map(ym -> new BudgetToCreateDTO(ym.getMonth(), ym.getYear()))
             .toList();
 
-        return new BulkUploadPreviewResponse(account.getId(), sortedRows, budgetsToCreate, rows.size());
+        return new BulkUploadPreviewResponse(account.getId(), sortedRows, budgetsToCreate, filteredRows.size());
     }
 
     @Transactional

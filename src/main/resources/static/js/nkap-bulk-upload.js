@@ -8,9 +8,11 @@ var bulkUploadCachedRows = [];
 function openBulkUploadModal() {
     document.getElementById('bulkUploadAccountSelect').value = '';
     document.getElementById('bulkUploadFileInput').value = '';
+    document.getElementById('bulkUploadStartDateInput').value = '';
+    document.getElementById('bulkUploadEndDateInput').value = '';
     Nkap.forms.clearValidation(
-        ['bulkUploadAccountSelect', 'bulkUploadFileInput'],
-        ['bulkUploadAccountError', 'bulkUploadFileError']
+        ['bulkUploadAccountSelect', 'bulkUploadFileInput', 'bulkUploadStartDateInput', 'bulkUploadEndDateInput'],
+        ['bulkUploadAccountError', 'bulkUploadFileError', 'bulkUploadDateRangeError']
     );
     hideBulkUploadErrors();
     bulkUploadCachedRows = [];
@@ -60,14 +62,17 @@ function showBulkUploadErrors(errors) {
 }
 
 function previewBulkUpload() {
-    var accountSelect = document.getElementById('bulkUploadAccountSelect');
-    var fileInput      = document.getElementById('bulkUploadFileInput');
-    var accountError   = document.getElementById('bulkUploadAccountError');
-    var fileError      = document.getElementById('bulkUploadFileError');
+    var accountSelect   = document.getElementById('bulkUploadAccountSelect');
+    var fileInput       = document.getElementById('bulkUploadFileInput');
+    var startDateInput  = document.getElementById('bulkUploadStartDateInput');
+    var endDateInput    = document.getElementById('bulkUploadEndDateInput');
+    var accountError    = document.getElementById('bulkUploadAccountError');
+    var fileError       = document.getElementById('bulkUploadFileError');
+    var dateRangeError  = document.getElementById('bulkUploadDateRangeError');
 
     Nkap.forms.clearValidation(
-        ['bulkUploadAccountSelect', 'bulkUploadFileInput'],
-        ['bulkUploadAccountError', 'bulkUploadFileError']
+        ['bulkUploadAccountSelect', 'bulkUploadFileInput', 'bulkUploadStartDateInput', 'bulkUploadEndDateInput'],
+        ['bulkUploadAccountError', 'bulkUploadFileError', 'bulkUploadDateRangeError']
     );
     hideBulkUploadErrors();
 
@@ -82,6 +87,12 @@ function previewBulkUpload() {
         fileError.textContent = 'Please select a CSV file.';
         valid = false;
     }
+    if (startDateInput.value && endDateInput.value && startDateInput.value > endDateInput.value) {
+        startDateInput.classList.add('is-invalid');
+        endDateInput.classList.add('is-invalid');
+        dateRangeError.textContent = 'Start date must be before end date.';
+        valid = false;
+    }
     if (!valid) return;
 
     Nkap.ui.setBusy('btnBulkUploadPreview', 'btnBulkUploadPreviewSpinner', 'btnBulkUploadPreviewIcon', true);
@@ -89,6 +100,12 @@ function previewBulkUpload() {
     var formData = new FormData();
     formData.append('accountId', accountSelect.value);
     formData.append('file', fileInput.files[0]);
+    if (startDateInput.value) {
+        formData.append('startDate', startDateInput.value);
+    }
+    if (endDateInput.value) {
+        formData.append('endDate', endDateInput.value);
+    }
 
     Nkap.http.postForm('/bulk-upload/preview', formData)
         .then(function (data) {
@@ -139,7 +156,10 @@ function renderBulkUploadPreview(data) {
 
     var note = document.getElementById('bulkUploadBudgetsNote');
     var budgets = data.budgetsToCreate || [];
-    if (budgets.length > 0) {
+    if ((data.rows || []).length === 0) {
+        note.textContent = 'No transactions found in the selected date range.';
+        note.classList.remove('d-none');
+    } else if (budgets.length > 0) {
         var monthNames = budgets.map(function(b) {
             return b.month.charAt(0) + b.month.slice(1).toLowerCase() + ' ' + b.year;
         });

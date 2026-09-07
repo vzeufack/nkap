@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.kmercoders.nkap.bulkupload.csv.CsvValidationException;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -28,8 +29,10 @@ public class BulkUploadController {
 
     @PostMapping("/preview")
     public ResponseEntity<BulkUploadPreviewResponse> preview(@RequestParam("accountId") Long accountId,
-                                                              @RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(bulkUploadService.previewUpload(accountId, file));
+                                                              @RequestParam("file") MultipartFile file,
+                                                              @RequestParam(value = "startDate", required = false) LocalDate startDate,
+                                                              @RequestParam(value = "endDate", required = false) LocalDate endDate) {
+        return ResponseEntity.ok(bulkUploadService.previewUpload(accountId, file, startDate, endDate));
     }
 
     @PostMapping("/confirm")

@@ -231,6 +231,74 @@ class BulkUploadControllerTest {
                 .andExpect(jsonPath("$.budgetsToCreate", hasSize(2)));
     }
 
+    // ── Preview: date range filter ──
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void preview_withStartAndEndDate_returnsOnlyRowsInRange() throws Exception {
+        mockMvc.perform(multipart(PREVIEW_URL)
+                        .file(csvFile(VALID_CHECKING_SAMPLE))
+                        .param("accountId", bofaCheckingAccountId.toString())
+                        .param("startDate", "2026-07-13")
+                        .param("endDate", "2026-07-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRows", is(1)))
+                .andExpect(jsonPath("$.rows", hasSize(1)))
+                .andExpect(jsonPath("$.rows[0].transactionDate", is("2026-07-13")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void preview_withOnlyStartDate_excludesEarlierRows() throws Exception {
+        mockMvc.perform(multipart(PREVIEW_URL)
+                        .file(csvFile(VALID_CHECKING_SAMPLE))
+                        .param("accountId", bofaCheckingAccountId.toString())
+                        .param("startDate", "2026-07-20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRows", is(7)))
+                .andExpect(jsonPath("$.rows", hasSize(7)));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void preview_withOnlyEndDate_excludesLaterRows() throws Exception {
+        mockMvc.perform(multipart(PREVIEW_URL)
+                        .file(csvFile(VALID_CHECKING_SAMPLE))
+                        .param("accountId", bofaCheckingAccountId.toString())
+                        .param("endDate", "2026-07-13"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRows", is(2)))
+                .andExpect(jsonPath("$.rows", hasSize(2)));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void preview_withDateRangeNarrowingToOneMonth_returnsMatchingBudgetsToCreate() throws Exception {
+        // Posted-Date-driven rows span June and July 2026; capping endDate at June 30 should
+        // drop the 3 July rows and shrink budgetsToCreate down to just June.
+        mockMvc.perform(multipart(PREVIEW_URL)
+                        .file(csvFile(VALID_CAPITAL_ONE_CREDIT_SAMPLE))
+                        .param("accountId", capitalOneCreditAccountId.toString())
+                        .param("endDate", "2026-06-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalRows", is(11)))
+                .andExpect(jsonPath("$.rows", hasSize(11)))
+                .andExpect(jsonPath("$.budgetsToCreate", hasSize(1)))
+                .andExpect(jsonPath("$.budgetsToCreate[0].month", is("JUNE")))
+                .andExpect(jsonPath("$.budgetsToCreate[0].year", is(2026)));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void preview_withStartDateAfterEndDate_returns400() throws Exception {
+        mockMvc.perform(multipart(PREVIEW_URL)
+                        .file(csvFile(VALID_CHECKING_SAMPLE))
+                        .param("accountId", bofaCheckingAccountId.toString())
+                        .param("startDate", "2026-07-20")
+                        .param("endDate", "2026-07-13"))
+                .andExpect(status().isBadRequest());
+    }
+
     // ── Preview: validation failures ──
 
     @Test
