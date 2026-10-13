@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <title>nkap – Transactions</title>
+    <th:block th:replace="~{fragments/header :: css}"></th:block>
+    <link rel="stylesheet" href="/css/budget-foundation.css"/>
+    <link rel="stylesheet" href="/css/budget-header.css"/>
+    <link rel="stylesheet" href="/css/budget-sidebar.css"/>
+    <link rel="stylesheet" href="/css/budget-modals.css"/>
+    <link rel="stylesheet" href="/css/budget-vendor-overrides.css"/>
+    <link rel="stylesheet" href="/css/transactions-page.css"/>
+</head>
+<body>
+
+<div class="container-fluid p-0 page-wrapper">
+
+    <div class="row no-gutters header-bar align-items-center">
+
+        <div class="col-3 logo-col d-flex align-items-center justify-content-center">
+            <span class="bree-serif nkap-logo">
+                <i class="fas fa-wallet"></i> nkap
+            </span>
+        </div>
+
+        <div class="col-9 month-col d-flex align-items-center px-4">
+            <h5 class="bree-serif tx-page-title mb-0">
+                Transactions
+                <span class="tx-page-period" th:text="'· ' + ${periodLabel}">· October 2026</span>
+            </h5>
+        </div>
+
+    </div>
+
+    <div class="row no-gutters content-row">
+
+        <div class="col-3 sidebar d-flex flex-column">
+
+            <th:block th:replace="~{fragments/sidebar-nav :: sidebar-nav('transactions')}"></th:block>
+
+            <div class="flex-grow-1"></div>
+
+            <div class="sidebar-section sidebar-user-section">
+                <div class="user-info">
+                    <i class="fas fa-user-circle user-avatar-icon"></i>
+                    <span class="user-email" th:text="${appUser?.email ?: 'user@email.com'}">user@email.com</span>
+                </div>
+                <a href="/logout" class="btn btn-logout" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+
+        </div>
+
+        <div class="col-9 tx-page-main">
+            <div id="transactions-table-container">
+                <th:block th:replace="~{fragments/transactions-table :: transactions-table}"></th:block>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ══ Transaction Details Modal ══ -->
+<div class="modal fade" id="transactionDetailsModal" tabindex="-1" role="dialog"
+     aria-labelledby="transactionDetailsModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="transactionDetailsModalTitle">Transaction Details</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="tx-detail-amount" id="txDetailAmount">$0.00</div>
+                <dl class="tx-detail-list mb-0">
+                    <dt>Date</dt>          <dd id="txDetailDate"></dd>
+                    <dt>Description</dt>   <dd id="txDetailDescription"></dd>
+                    <dt>Direction</dt>     <dd id="txDetailDirection"></dd>
+                    <dt>Type</dt>          <dd id="txDetailType"></dd>
+                    <dt>Group</dt>         <dd id="txDetailGroup"></dd>
+                    <dt>Category</dt>      <dd id="txDetailCategory"></dd>
+                    <dt>Account</dt>       <dd id="txDetailAccount"></dd>
+                    <dt>Account Type</dt>  <dd id="txDetailAccountType"></dd>
+                    <dt>Budget</dt>        <dd id="txDetailBudget"></dd>
+                    <dt>Note</dt>          <dd id="txDetailNote" class="tx-detail-note"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/header :: scripts}"></th:block>
+<script src="/js/nkap-transactions-page.js"></script>
+
+</body>
+</html>

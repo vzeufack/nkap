@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<body>
+<div class="sidebar-section sidebar-nav-section" th:fragment="sidebar-nav(active)">
+    <ul class="nav flex-column sidebar-nav">
+        <li class="nav-item">
+            <a class="nav-link sidebar-link" href="/budgets/"
+               th:classappend="${active == 'budget'} ? 'active' : ''">
+                <i class="fas fa-th-large nav-icon"></i>
+                <span>Budget</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link" href="/transactions"
+               th:classappend="${active == 'transactions'} ? 'active' : ''">
+                <i class="fas fa-exchange-alt nav-icon"></i>
+                <span>Transactions</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link" href="/reports"
+               th:classappend="${active == 'reports'} ? 'active' : ''">
+                <i class="fas fa-chart-bar nav-icon"></i>
+                <span>Reports</span>
+            </a>
+        </li>
+    </ul>
+</div>
+</body>
+</html>

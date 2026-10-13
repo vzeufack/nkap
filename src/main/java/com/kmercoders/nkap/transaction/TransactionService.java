@@ -10,6 +10,9 @@ import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.BudgetCategoryRepository;
 import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,8 @@ import java.util.UUID;
 @Service
 @Transactional(readOnly = true)
 public class TransactionService {
+
+    public static final int PAGE_SIZE = 10;
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -51,6 +56,17 @@ public class TransactionService {
             .stream()
             .map(TransactionSummaryDTO::from)
             .toList();
+    }
+
+    public Page<TransactionListItemDTO> getStandardTransactionsForCurrentUser(YearMonth period, int page) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), PAGE_SIZE,
+            Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id")));
+
+        return transactionRepository
+            .findByBudgetAppUserIdAndTransactionTypeAndTransactionDateBetween(
+                appUser.getId(), TransactionType.STANDARD, period.atDay(1), period.atEndOfMonth(), pageRequest)
+            .map(TransactionListItemDTO::from);
     }
 
     @Transactional

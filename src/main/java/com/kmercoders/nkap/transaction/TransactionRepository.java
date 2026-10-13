@@ -1,9 +1,13 @@
 package com.kmercoders.nkap.transaction;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,6 +20,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByBudgetIdOrderByTransactionDateDesc(Long budgetId);
     Optional<Transaction> findByIdAndBudgetAppUserId(Long id, Long appUserId);
     List<Transaction> findByTransferId(UUID transferId);
+
+    @EntityGraph(attributePaths = {"account", "budgetCategory.category.group", "budget"})
+    Page<Transaction> findByBudgetAppUserIdAndTransactionTypeAndTransactionDateBetween(
+        Long appUserId, TransactionType transactionType, LocalDate from, LocalDate to, Pageable pageable);
     boolean existsByBudgetCategoryId(Long budgetCategoryId);
     boolean existsByAccountId(Long accountId);
 

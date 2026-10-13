@@ -70,28 +70,7 @@
 
         <div class="col-3 sidebar d-flex flex-column">
 
-            <div class="sidebar-section sidebar-nav-section">
-                <ul class="nav flex-column sidebar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link sidebar-link active" href="/budget">
-                            <i class="fas fa-th-large nav-icon"></i>
-                            <span>Budget</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link sidebar-link" href="/reports">
-                            <i class="fas fa-chart-bar nav-icon"></i>
-                            <span>Reports</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link sidebar-link" href="/transactions">
-                            <i class="fas fa-exchange-alt nav-icon"></i>
-                            <span>Transactions</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <th:block th:replace="~{fragments/sidebar-nav :: sidebar-nav('budget')}"></th:block>
 
             <div class="sidebar-section sidebar-accounts-section flex-grow-1">
                 <div class="sidebar-section-header">

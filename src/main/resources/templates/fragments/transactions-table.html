@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<body>
+<div class="tx-table-panel" th:fragment="transactions-table"
+     th:with="txPage=${transactionsPage}">
+
+    <div class="tx-table-empty" th:if="${txPage.totalElements == 0}">
+        <i class="fas fa-receipt"></i>
+        <span th:text="'No transactions for ' + ${periodLabel} + '.'">No transactions for this period.</span>
+    </div>
+
+    <th:block th:if="${txPage.totalElements > 0}">
+        <div class="tx-table-scroll">
+            <table class="table tx-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col" class="tx-table-amount-col text-right">Amount</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Group</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Account Type</th>
+                        <th scope="col">Account</th>
+                        <th scope="col" class="tx-table-actions"><span class="sr-only">Details</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="tx : ${txPage.content}"
+                        th:with="sign=${tx.direction.name() == 'DEBIT' ? '−' : '+'},
+                                 amountText=${'$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                        <td class="tx-table-date" th:text="${#temporals.format(tx.transactionDate, 'MMM d, yyyy')}">Jan 1, 2026</td>
+                        <td class="tx-table-amount tx-table-amount-col text-right"
+                            th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
+                            th:text="${sign + amountText}">$0.00</td>
+                        <td th:text="${tx.transactionTypeLabel}">Standard</td>
+                        <td th:text="${tx.groupName ?: '—'}">Group</td>
+                        <td th:text="${tx.categoryName ?: '—'}">Category</td>
+                        <td th:text="${tx.accountTypeLabel ?: '—'}">Checking</td>
+                        <td th:text="${tx.accountName ?: '—'}">Account</td>
+                        <td class="tx-table-actions">
+                            <button type="button" class="tx-details-btn" title="View details"
+                                    th:attr="data-date=${#temporals.format(tx.transactionDate, 'EEEE, MMMM d, yyyy')},
+                                             data-amount=${sign + amountText},
+                                             data-direction=${tx.direction.name()},
+                                             data-type=${tx.transactionType.name()},
+                                             data-description=${tx.description},
+                                             data-note=${tx.note},
+                                             data-group=${tx.groupName},
+                                             data-category=${tx.categoryName},
+                                             data-account=${tx.accountName},
+                                             data-account-type=${tx.accountTypeLabel},
+                                             data-budget=${#strings.capitalize(#strings.toLowerCase(tx.budgetMonth.name())) + ' ' + tx.budgetYear}">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tx-table-footer"
+             th:with="first=${txPage.number * txPage.size + 1},
+                      last=${txPage.number * txPage.size + txPage.numberOfElements},
+                      startPage=${txPage.number - 2 > 0 ? txPage.number - 2 : 0},
+                      endPage=${txPage.number + 2 < txPage.totalPages - 1 ? txPage.number + 2 : txPage.totalPages - 1}">
+            <span class="tx-table-range"
+                  th:text="${txPage.numberOfElements > 0} ? |Showing ${first}–${last} of ${txPage.totalElements}| : |${txPage.totalElements} transactions|">
+                Showing 1–10 of 10
+            </span>
+
+            <nav aria-label="Transactions pages" th:if="${txPage.totalPages > 1}">
+                <ul class="pagination tx-pagination mb-0">
+                    <li class="page-item" th:classappend="${txPage.first} ? 'disabled' : ''">
+                        <a class="page-link" aria-label="Previous"
+                           th:href="@{/transactions(page=${txPage.number - 1})}"
+                           th:attr="hx-get=@{/transactions(page=${txPage.number - 1})}"
+                           hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                        th:classappend="${i == txPage.number} ? 'active' : ''">
+                        <a class="page-link"
+                           th:href="@{/transactions(page=${i})}"
+                           th:attr="hx-get=@{/transactions(page=${i})}"
+                           hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true"
+                           th:text="${i + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${txPage.last} ? 'disabled' : ''">
+                        <a class="page-link" aria-label="Next"
+                           th:href="@{/transactions(page=${txPage.number + 1})}"
+                           th:attr="hx-get=@{/transactions(page=${txPage.number + 1})}"
+                           hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </th:block>
+</div>
+</body>
+</html>
