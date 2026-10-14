@@ -63,6 +63,10 @@ class TransactionPageControllerTest {
     private Budget previousBudget;
     private Budget otherUserBudget;
     private BudgetCategory budgetCategory;
+    // Second group/category and account type, for the filter tests.
+    private Account savingsAccount;
+    private BudgetCategory rentBudgetCategory;
+    private Account otherUserAccount;
 
     @BeforeAll
     void setUp() {
@@ -88,6 +92,15 @@ class TransactionPageControllerTest {
         otherUserBudget = budgetRepository.save(new Budget(currentMonth.getMonth(), currentMonth.getYear(), other));
 
         budgetCategory = budgetCategoryRepository.save(new BudgetCategory(currentBudget, category, BigDecimal.ZERO));
+
+        savingsAccount = accountRepository.save(
+            new Account(AccountType.SAVINGS, "Rainy Day", new BigDecimal("500.00"), user));
+        Group housing = groupRepository.save(new Group("Housing"));
+        Category rent = categoryRepository.save(new Category("Rent", housing));
+        rentBudgetCategory = budgetCategoryRepository.save(new BudgetCategory(currentBudget, rent, BigDecimal.ZERO));
+
+        otherUserAccount = accountRepository.save(
+            new Account(AccountType.CHECKING, "Their Checking", new BigDecimal("1000.00"), other));
     }
 
     @BeforeEach
@@ -106,6 +119,23 @@ class TransactionPageControllerTest {
 
     private Transaction saveStandard(int day, String description) {
         return save("10.00", Direction.DEBIT, TransactionType.STANDARD, currentBudget, currentMonth.atDay(day), description);
+    }
+
+    /**
+     * Saves a STANDARD transaction on the current budget. The page filters on transaction date, not
+     * budget, so dates outside the current month are fine here even though the app normally keeps
+     * a transaction inside its budget's month.
+     */
+    private Transaction saveTx(String amount, Direction direction, LocalDate date, String description, String note,
+                               Account txAccount, BudgetCategory txCategory) {
+        Transaction t = new Transaction(new BigDecimal(amount), date, direction, TransactionType.STANDARD, note,
+            txAccount, txCategory, currentBudget);
+        t.setDescription(description);
+        return transactionRepository.save(t);
+    }
+
+    private List<String> descriptionsFor(org.springframework.test.web.servlet.RequestBuilder request) throws Exception {
+        return descriptions(pageFrom(mockMvc.perform(request).andExpect(status().isOk()).andReturn()));
     }
 
     @SuppressWarnings("unchecked")
@@ -312,5 +342,228 @@ class TransactionPageControllerTest {
         mockMvc.perform(get(URL))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    // ── Filters: period ────────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_pastThreeMonths_includesCurrentAndTwoPreviousMonthsOnly() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "this-month", null, null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.minusMonths(2).atDay(1), "two-back", null, null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.minusMonths(3).atEndOfMonth(), "three-back", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("period", "PAST_3_MONTHS")))
+            .containsExactly("this-month", "two-back");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_forever_includesEverything() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "recent", null, null, null);
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2001, 1, 1), "ancient", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("period", "FOREVER"))).containsExactly("recent", "ancient");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_customRange_isInclusiveAtBothEnds() throws Exception {
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2025, 3, 9),  "before", null, null, null);
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2025, 3, 10), "start", null, null, null);
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2025, 3, 20), "end", null, null, null);
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2025, 3, 21), "after", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("period", "CUSTOM").param("from", "2025-03-10").param("to", "2025-03-20")))
+            .containsExactly("end", "start");
+        // A reversed range is swapped rather than returning nothing.
+        assertThat(descriptionsFor(get(URL).param("period", "CUSTOM").param("from", "2025-03-20").param("to", "2025-03-10")))
+            .containsExactly("end", "start");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_customDatesAreIgnoredForPresetPeriod() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "this-month", null, null, null);
+        saveTx("10.00", Direction.DEBIT, LocalDate.of(2025, 3, 10), "old", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("period", "THIS_MONTH").param("from", "2025-03-01").param("to", "2025-03-31")))
+            .containsExactly("this-month");
+    }
+
+    // ── Filters: transaction type ──────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_byTransactionType_defaultsToStandard() throws Exception {
+        save("10.00", Direction.DEBIT, TransactionType.STANDARD,   currentBudget, currentMonth.atDay(3), "standard");
+        save("10.00", Direction.DEBIT, TransactionType.ADJUSTMENT, currentBudget, currentMonth.atDay(2), "adjustment");
+        save("10.00", Direction.DEBIT, TransactionType.TRANSFER,   currentBudget, currentMonth.atDay(1), "transfer");
+
+        assertThat(descriptionsFor(get(URL))).containsExactly("standard");
+        assertThat(descriptionsFor(get(URL).param("type", "ADJUSTMENT"))).containsExactly("adjustment");
+        assertThat(descriptionsFor(get(URL).param("type", "TRANSFER"))).containsExactly("transfer");
+        assertThat(descriptionsFor(get(URL).param("type", "ALL"))).containsExactly("standard", "adjustment", "transfer");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void nonStandardRows_haveDetailsButNoEditOrDeleteButtons() throws Exception {
+        save("10.00", Direction.DEBIT, TransactionType.TRANSFER, currentBudget, currentMonth.atDay(1), "transfer");
+
+        mockMvc.perform(get(URL).param("type", "TRANSFER"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("tx-details-btn")))
+                .andExpect(content().string(not(containsString("onclick=\"openEditTransactionModal(this)\""))))
+                .andExpect(content().string(not(containsString("onclick=\"deleteTransaction(this)\""))));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void fullPage_rendersTypeFilterWithStandardSelectedByDefault() throws Exception {
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(matchesPattern("(?s).*<option value=\"STANDARD\"\\s+selected=\"selected\">.*")))
+                .andExpect(content().string(containsString("<option value=\"ALL\">All types</option>")));
+    }
+
+    // ── Filters: group / category / account ────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_byGroupAndCategory() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(3), "groceries", null, null, budgetCategory);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(2), "rent", null, null, rentBudgetCategory);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "loose", null, null, null);
+
+        Long livingGroupId = budgetCategory.getCategory().getGroup().getId();
+        Long rentCategoryId = rentBudgetCategory.getCategory().getId();
+
+        assertThat(descriptionsFor(get(URL).param("groupId", livingGroupId.toString()))).containsExactly("groceries");
+        assertThat(descriptionsFor(get(URL).param("categoryId", rentCategoryId.toString()))).containsExactly("rent");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_uncategorized_returnsOnlyUncategorizedAndOverridesCategory() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(3), "groceries", null, null, budgetCategory);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "loose", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("uncategorized", "true"))).containsExactly("loose");
+        assertThat(descriptionsFor(get(URL)
+                .param("uncategorized", "true")
+                .param("categoryId", budgetCategory.getCategory().getId().toString())))
+            .containsExactly("loose");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_byAccountTypeAndAccount() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(3), "checking", null, account, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(2), "savings", null, savingsAccount, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "no-account", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("accountType", "SAVINGS"))).containsExactly("savings");
+        assertThat(descriptionsFor(get(URL).param("accountId", account.getId().toString()))).containsExactly("checking");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filter_neverReturnsOtherUsersTransactions() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "mine", null, null, null);
+        Transaction theirs = new Transaction(new BigDecimal("10.00"), currentMonth.atDay(1), Direction.DEBIT,
+            TransactionType.STANDARD, null, otherUserAccount, null, otherUserBudget);
+        theirs.setDescription("theirs");
+        transactionRepository.save(theirs);
+
+        assertThat(descriptionsFor(get(URL).param("period", "FOREVER"))).containsExactly("mine");
+        assertThat(descriptionsFor(get(URL).param("accountId", otherUserAccount.getId().toString()))).isEmpty();
+        assertThat(descriptionsFor(get(URL).param("q", "theirs"))).isEmpty();
+    }
+
+    // ── Search ─────────────────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void search_matchesDescriptionOrNoteCaseInsensitively() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(3), "Morning COFFEE", null, null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(2), "Bakery", "coffee and croissant", null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "Fuel", "highway", null, null);
+
+        assertThat(descriptionsFor(get(URL).param("q", "  Coffee "))).containsExactly("Morning COFFEE", "Bakery");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void search_treatsLikeWildcardsLiterally() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(2), "100% refund", null, null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "1000 refund", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("q", "100%"))).containsExactly("100% refund");
+        assertThat(descriptionsFor(get(URL).param("q", "_"))).isEmpty();
+    }
+
+    // ── Sort ───────────────────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void sort_byDateAscending() throws Exception {
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(5), "day-5", null, null, null);
+        saveTx("10.00", Direction.DEBIT, currentMonth.atDay(1), "day-1", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("sort", "DATE_ASC"))).containsExactly("day-1", "day-5");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void sort_byAmountUsesSizeRegardlessOfDirection() throws Exception {
+        saveTx("12.00",  Direction.DEBIT,  currentMonth.atDay(1), "small-debit", null, null, null);
+        saveTx("500.00", Direction.CREDIT, currentMonth.atDay(2), "mid-credit", null, null, null);
+        saveTx("900.00", Direction.DEBIT,  currentMonth.atDay(3), "big-debit", null, null, null);
+
+        assertThat(descriptionsFor(get(URL).param("sort", "AMOUNT_DESC")))
+            .containsExactly("big-debit", "mid-credit", "small-debit");
+        assertThat(descriptionsFor(get(URL).param("sort", "AMOUNT_ASC")))
+            .containsExactly("small-debit", "mid-credit", "big-debit");
+    }
+
+    // ── Rendering ──────────────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void pagination_linksKeepActiveFilters() throws Exception {
+        for (int day = 1; day <= 12; day++) {
+            saveTx("10.00", Direction.DEBIT, currentMonth.atDay(day), "coffee " + day, null, null, null);
+        }
+
+        mockMvc.perform(get(URL).param("q", "coffee").param("sort", "AMOUNT_ASC").param("groupId", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"/transactions?q=coffee&amp;sort=AMOUNT_ASC&amp;page=1\"")))
+                .andExpect(content().string(not(containsString("groupId="))));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void fullPage_rendersFilterFormWithSelectedValues() throws Exception {
+        mockMvc.perform(get(URL)
+                        .param("period", "CUSTOM").param("from", "2025-03-01").param("to", "2025-03-31")
+                        .param("accountType", "SAVINGS").param("q", "rent"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"txFilterForm\"")))
+                .andExpect(content().string(matchesPattern("(?s).*<option value=\"CUSTOM\"\\s+selected=\"selected\">.*")))
+                .andExpect(content().string(matchesPattern("(?s).*<option value=\"SAVINGS\"\\s+selected=\"selected\">.*")))
+                .andExpect(content().string(containsString("value=\"2025-03-01\"")))
+                .andExpect(content().string(containsString("value=\"rent\"")))
+                .andExpect(content().string(containsString("data-account-type=\"SAVINGS\"")))
+                .andExpect(content().string(containsString("Mar 1 – Mar 31, 2025")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void filteredEmptyResult_showsResetLink() throws Exception {
+        mockMvc.perform(get(URL).param("q", "nothing-matches"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("No transactions match these filters")))
+                .andExpect(content().string(containsString("Reset filters")));
     }
 }

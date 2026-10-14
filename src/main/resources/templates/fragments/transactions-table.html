@@ -6,7 +6,12 @@
 
     <div class="tx-table-empty" th:if="${txPage.totalElements == 0}">
         <i class="fas fa-receipt"></i>
-        <span th:text="'No transactions for ' + ${periodLabel} + '.'">No transactions for this period.</span>
+        <span th:if="${filter.isDefault()}"
+              th:text="'No transactions for ' + ${rangeLabel} + '.'">No transactions for this period.</span>
+        <th:block th:unless="${filter.isDefault()}">
+            <span th:text="'No transactions match these filters (' + ${rangeLabel} + ').'">No transactions match these filters.</span>
+            <a href="/transactions" class="tx-table-empty-reset">Reset filters</a>
+        </th:block>
     </div>
 
     <th:block th:if="${txPage.totalElements > 0}">
@@ -14,8 +19,28 @@
             <table class="table tx-table mb-0">
                 <thead>
                     <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col" class="tx-table-amount-col text-right">Amount</th>
+                        <th scope="col" th:with="active=${filter.sort.name().startsWith('DATE')}">
+                            <button type="button" class="tx-sort-toggle"
+                                    th:classappend="${active} ? 'active' : ''"
+                                    data-sort-desc="DATE_DESC" data-sort-asc="DATE_ASC"
+                                    th:title="${active and filter.sort.name() == 'DATE_DESC'} ? 'Sort oldest first' : 'Sort newest first'">
+                                Date
+                                <i class="fas"
+                                   th:classappend="${!active} ? 'fa-sort' : (${filter.sort.name() == 'DATE_DESC'} ? 'fa-sort-down' : 'fa-sort-up')"></i>
+                            </button>
+                        </th>
+                        <th scope="col">Description</th>
+                        <th scope="col"
+                            th:with="active=${filter.sort.name().startsWith('AMOUNT')}">
+                            <button type="button" class="tx-sort-toggle"
+                                    th:classappend="${active} ? 'active' : ''"
+                                    data-sort-desc="AMOUNT_DESC" data-sort-asc="AMOUNT_ASC"
+                                    th:title="${active and filter.sort.name() == 'AMOUNT_DESC'} ? 'Sort smallest first' : 'Sort largest first'">
+                                Amount
+                                <i class="fas"
+                                   th:classappend="${!active} ? 'fa-sort' : (${filter.sort.name() == 'AMOUNT_DESC'} ? 'fa-sort-down' : 'fa-sort-up')"></i>
+                            </button>
+                        </th>
                         <th scope="col">Type</th>
                         <th scope="col">Group</th>
                         <th scope="col">Category</th>
@@ -29,7 +54,10 @@
                         th:with="sign=${tx.direction.name() == 'DEBIT' ? '−' : '+'},
                                  amountText=${'$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
                         <td class="tx-table-date" th:text="${#temporals.format(tx.transactionDate, 'MMM d, yyyy')}">Jan 1, 2026</td>
-                        <td class="tx-table-amount tx-table-amount-col text-right"
+                        <td class="tx-table-description"
+                            th:text="${tx.description ?: '—'}"
+                            th:title="${tx.description}">Description</td>
+                        <td class="tx-table-amount"
                             th:classappend="${tx.direction.name() == 'CREDIT'} ? 'credit' : 'debit'"
                             th:text="${sign + amountText}">$0.00</td>
                         <td th:text="${tx.transactionTypeLabel}">Standard</td>
@@ -52,23 +80,27 @@
                                              data-budget=${#strings.capitalize(#strings.toLowerCase(tx.budgetMonth.name())) + ' ' + tx.budgetYear}">
                                 <i class="fas fa-info-circle"></i>
                             </button>
-                            <button type="button" class="tx-action-btn tx-edit-btn" title="Edit transaction"
-                                    onclick="openEditTransactionModal(this)"
-                                    th:attr="data-id=${tx.id},
-                                             data-amount=${tx.amount},
-                                             data-type=${tx.direction.name()},
-                                             data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
-                                             data-description=${tx.description},
-                                             data-note=${tx.note},
-                                             data-account-id=${tx.accountId},
-                                             data-category-id=${tx.categoryId}">
-                                <i class="fas fa-pen"></i>
-                            </button>
-                            <button type="button" class="tx-action-btn tx-delete-btn" title="Delete transaction"
-                                    onclick="deleteTransaction(this)"
-                                    th:attr="data-id=${tx.id}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            <!-- Adjustments and transfers are system-generated (transfers come in linked pairs),
+                                 so only standard transactions can be edited or deleted here. -->
+                            <th:block th:if="${tx.transactionType.name() == 'STANDARD'}">
+                                <button type="button" class="tx-action-btn tx-edit-btn" title="Edit transaction"
+                                        onclick="openEditTransactionModal(this)"
+                                        th:attr="data-id=${tx.id},
+                                                 data-amount=${tx.amount},
+                                                 data-type=${tx.direction.name()},
+                                                 data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
+                                                 data-description=${tx.description},
+                                                 data-note=${tx.note},
+                                                 data-account-id=${tx.accountId},
+                                                 data-category-id=${tx.categoryId}">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="tx-action-btn tx-delete-btn" title="Delete transaction"
+                                        onclick="deleteTransaction(this)"
+                                        th:attr="data-id=${tx.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </th:block>
                         </td>
                     </tr>
                 </tbody>
@@ -81,7 +113,7 @@
                       startPage=${txPage.number - 2 > 0 ? txPage.number - 2 : 0},
                       endPage=${txPage.number + 2 < txPage.totalPages - 1 ? txPage.number + 2 : txPage.totalPages - 1}">
             <span class="tx-table-range"
-                  th:text="${txPage.numberOfElements > 0} ? |Showing ${first}–${last} of ${txPage.totalElements}| : |${txPage.totalElements} transactions|">
+                  th:text="${txPage.numberOfElements > 0} ? |Showing ${first}–${last} of ${txPage.totalElements} · ${rangeLabel}| : |${txPage.totalElements} transactions · ${rangeLabel}|">
                 Showing 1–10 of 10
             </span>
 
@@ -89,8 +121,8 @@
                 <ul class="pagination tx-pagination mb-0">
                     <li class="page-item" th:classappend="${txPage.first} ? 'disabled' : ''">
                         <a class="page-link" aria-label="Previous"
-                           th:href="@{/transactions(page=${txPage.number - 1})}"
-                           th:attr="hx-get=@{/transactions(page=${txPage.number - 1})}"
+                           th:href="${filter.pageUrl(txPage.number - 1)}"
+                           th:attr="hx-get=${filter.pageUrl(txPage.number - 1)}"
                            hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true">
                             <i class="fas fa-chevron-left"></i>
                         </a>
@@ -98,15 +130,15 @@
                     <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
                         th:classappend="${i == txPage.number} ? 'active' : ''">
                         <a class="page-link"
-                           th:href="@{/transactions(page=${i})}"
-                           th:attr="hx-get=@{/transactions(page=${i})}"
+                           th:href="${filter.pageUrl(i)}"
+                           th:attr="hx-get=${filter.pageUrl(i)}"
                            hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true"
                            th:text="${i + 1}">1</a>
                     </li>
                     <li class="page-item" th:classappend="${txPage.last} ? 'disabled' : ''">
                         <a class="page-link" aria-label="Next"
-                           th:href="@{/transactions(page=${txPage.number + 1})}"
-                           th:attr="hx-get=@{/transactions(page=${txPage.number + 1})}"
+                           th:href="${filter.pageUrl(txPage.number + 1)}"
+                           th:attr="hx-get=${filter.pageUrl(txPage.number + 1)}"
                            hx-target="#transactions-table-container" hx-swap="innerHTML" hx-push-url="true">
                             <i class="fas fa-chevron-right"></i>
                         </a>

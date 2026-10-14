@@ -14,7 +14,7 @@ import com.kmercoders.nkap.category.CategoryRepository;
 import com.kmercoders.nkap.group.Group;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,24 +63,19 @@ public class TransactionService {
             .toList();
     }
 
-    public Page<TransactionListItemDTO> getStandardTransactionsForCurrentUser(YearMonth period, int page) {
+    public Page<TransactionListItemDTO> getTransactionsForCurrentUser(TransactionFilter filter, int page) {
         AppUser appUser = appUserService.getAuthenticatedUser();
-        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), PAGE_SIZE,
-            Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id")));
+        Specification<Transaction> spec = TransactionSpecifications.forUser(appUser.getId(), filter, YearMonth.now());
+        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), PAGE_SIZE, filter.getSort().toSort());
 
-        Page<Transaction> result = findStandardTransactions(appUser, period, pageRequest);
+        Page<Transaction> result = transactionRepository.findAll(spec, pageRequest);
 
         // A page past the end (e.g. after deleting the only row on the last page) falls back to the last page.
         if (result.isEmpty() && result.getTotalPages() > 0 && pageRequest.getPageNumber() >= result.getTotalPages()) {
-            result = findStandardTransactions(appUser, period, pageRequest.withPage(result.getTotalPages() - 1));
+            result = transactionRepository.findAll(spec, pageRequest.withPage(result.getTotalPages() - 1));
         }
 
         return result.map(TransactionListItemDTO::from);
-    }
-
-    private Page<Transaction> findStandardTransactions(AppUser appUser, YearMonth period, PageRequest pageRequest) {
-        return transactionRepository.findByBudgetAppUserIdAndTransactionTypeAndTransactionDateBetween(
-            appUser.getId(), TransactionType.STANDARD, period.atDay(1), period.atEndOfMonth(), pageRequest);
     }
 
     @Transactional

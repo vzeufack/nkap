@@ -24,10 +24,7 @@
         </div>
 
         <div class="col-6 month-col d-flex align-items-center px-4">
-            <h5 class="bree-serif tx-page-title mb-0">
-                Transactions
-                <span class="tx-page-period" th:text="'· ' + ${periodLabel}">· October 2026</span>
-            </h5>
+            <h5 class="bree-serif tx-page-title mb-0">Transactions</h5>
         </div>
 
         <div class="col-3 actions-col d-flex align-items-center justify-content-center">
@@ -65,6 +62,8 @@
         </div>
 
         <div class="col-9 tx-page-main">
+            <th:block th:replace="~{fragments/transactions-filters :: transactions-filters}"></th:block>
+
             <div id="transactions-table-container">
                 <th:block th:replace="~{fragments/transactions-table :: transactions-table}"></th:block>
             </div>

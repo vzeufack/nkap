@@ -99,21 +99,37 @@ public class CategoryService {
 
     /**
      * All of the current user's categories across every budget, keyed by group name, for
-     * category dropdowns that aren't tied to a single budget. Ordered like the budget plan:
-     * the default (income) group first, then groups and categories alphabetically.
+     * category dropdowns that aren't tied to a single budget. Groups sharing a name are merged.
      */
     public Map<String, List<Category>> getCategoryOptionsForCurrentUser() {
-        AppUser appUser = appUserService.getAuthenticatedUser();
-        return categoryRepository.findDistinctByGroup_Budgets_AppUserId(appUser.getId()).stream()
-            .sorted(Comparator
-                .<Category, Boolean>comparing(c -> !c.getGroup().isDefault())
-                .thenComparing(c -> c.getGroup().getName(), String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(Category::getName, String.CASE_INSENSITIVE_ORDER))
+        return sortedCategoriesForCurrentUser().stream()
             .collect(Collectors.groupingBy(
                 c -> c.getGroup().getName(),
                 LinkedHashMap::new,
                 Collectors.toList()
             ));
+    }
+
+    /** Same categories as {@link #getCategoryOptionsForCurrentUser()}, keyed by group so ids are available. */
+    public Map<Group, List<Category>> getGroupsWithCategoriesForCurrentUser() {
+        return sortedCategoriesForCurrentUser().stream()
+            .collect(Collectors.groupingBy(
+                Category::getGroup,
+                LinkedHashMap::new,
+                Collectors.toList()
+            ));
+    }
+
+    /** Ordered like the budget plan: the default (income) group first, then groups and categories alphabetically. */
+    private List<Category> sortedCategoriesForCurrentUser() {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+        return categoryRepository.findDistinctByGroup_Budgets_AppUserId(appUser.getId()).stream()
+            .sorted(Comparator
+                .<Category, Boolean>comparing(c -> !c.getGroup().isDefault())
+                .thenComparing(c -> c.getGroup().getName(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(c -> c.getGroup().getId())
+                .thenComparing(Category::getName, String.CASE_INSENSITIVE_ORDER))
+            .toList();
     }
 
     public BigDecimal getTotalCategoryBalanceForCurrentUser() {

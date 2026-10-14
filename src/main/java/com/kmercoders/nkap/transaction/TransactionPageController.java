@@ -1,16 +1,16 @@
 package com.kmercoders.nkap.transaction;
 
 import com.kmercoders.nkap.account.AccountService;
+import com.kmercoders.nkap.account.AccountType;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.CategoryService;
 
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
  */
 @Controller
 public class TransactionPageController {
-
-    private static final DateTimeFormatter PERIOD_FORMAT = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
 
     private final TransactionService transactionService;
     private final AppUserService appUserService;
@@ -37,12 +35,13 @@ public class TransactionPageController {
     }
 
     @GetMapping("/transactions")
-    public String showTransactions(@RequestParam(value = "page", defaultValue = "0") int page,
+    public String showTransactions(@ModelAttribute("filter") TransactionFilter filter,
+                                   @RequestParam(value = "page", defaultValue = "0") int page,
                                    @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
                                    Model model) {
-        YearMonth period = YearMonth.now();
-        model.addAttribute("transactionsPage", transactionService.getStandardTransactionsForCurrentUser(period, page));
-        model.addAttribute("periodLabel", period.format(PERIOD_FORMAT));
+        filter.normalize();
+        model.addAttribute("transactionsPage", transactionService.getTransactionsForCurrentUser(filter, page));
+        model.addAttribute("rangeLabel", filter.rangeLabel(YearMonth.now()));
 
         if (htmxRequest != null) {
             return "fragments/transactions-table :: transactions-table";
@@ -51,6 +50,10 @@ public class TransactionPageController {
         model.addAttribute("appUser", appUserService.getAuthenticatedUser());
         model.addAttribute("accounts", accountService.getAccountsForCurrentUser());
         model.addAttribute("categoryOptions", categoryService.getCategoryOptionsForCurrentUser());
+        model.addAttribute("filterGroups", categoryService.getGroupsWithCategoriesForCurrentUser());
+        model.addAttribute("accountTypes", AccountType.values());
+        model.addAttribute("periods", TransactionPeriod.values());
+        model.addAttribute("transactionTypes", TransactionTypeFilter.values());
         return "transactions";
     }
 }

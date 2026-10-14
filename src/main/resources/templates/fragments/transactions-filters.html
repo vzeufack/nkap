@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<body>
+
+<!--
+  Filter bar for the transactions page. Lives outside #transactions-table-container so it's never
+  swapped (inputs keep focus while typing). Any change re-requests the table via htmx and pushes the
+  query string to the URL; dependent-dropdown and mutual-exclusion rules live in
+  nkap-transactions-page.js, and TransactionFilter.normalize() enforces the same rules server-side.
+-->
+<form id="txFilterForm" class="tx-filters" th:fragment="transactions-filters"
+      action="/transactions" method="get"
+      hx-get="/transactions"
+      hx-target="#transactions-table-container"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="change, input changed delay:400ms from:#txFilterSearch, submit">
+
+    <div class="tx-filters-row tx-filters-search-row">
+        <div class="tx-filter tx-filter-search">
+            <i class="fas fa-search tx-filter-search-icon"></i>
+            <input type="search" id="txFilterSearch" name="q" class="form-control nkap-input"
+                   placeholder="Search description or note…" autocomplete="off" maxlength="100"
+                   th:value="${filter.q}" aria-label="Search description or note"/>
+        </div>
+    </div>
+
+    <div class="tx-filters-row">
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterPeriod">Period</label>
+            <select id="txFilterPeriod" name="period" class="form-control nkap-input">
+                <option th:each="p : ${periods}"
+                        th:value="${p.name()}"
+                        th:text="${p.label}"
+                        th:selected="${filter.period == p}">Last month</option>
+            </select>
+        </div>
+
+        <div class="tx-filter-custom-range" id="txFilterCustomRange"
+             th:hidden="${filter.period.name() != 'CUSTOM'}">
+            <div class="tx-filter">
+                <label class="tx-filter-label" for="txFilterFrom">From</label>
+                <input type="date" id="txFilterFrom" name="from" class="form-control nkap-input"
+                       th:value="${filter.from}" th:disabled="${filter.period.name() != 'CUSTOM'}"/>
+            </div>
+            <div class="tx-filter">
+                <label class="tx-filter-label" for="txFilterTo">To</label>
+                <input type="date" id="txFilterTo" name="to" class="form-control nkap-input"
+                       th:value="${filter.to}" th:disabled="${filter.period.name() != 'CUSTOM'}"/>
+            </div>
+        </div>
+
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterGroup">Group</label>
+            <select id="txFilterGroup" name="groupId" class="form-control nkap-input">
+                <option value="">All groups</option>
+                <option th:each="entry : ${filterGroups}"
+                        th:value="${entry.key.id}"
+                        th:text="${entry.key.name}"
+                        th:selected="${filter.groupId == entry.key.id}">Group</option>
+            </select>
+        </div>
+
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterCategory">Category</label>
+            <select id="txFilterCategory" name="categoryId" class="form-control nkap-input">
+                <option value="">All categories</option>
+                <th:block th:each="entry : ${filterGroups}">
+                    <option th:each="category : ${entry.value}"
+                            th:value="${category.id}"
+                            th:text="${category.name}"
+                            th:attr="data-group-id=${entry.key.id}"
+                            th:selected="${filter.categoryId == category.id}">Category</option>
+                </th:block>
+            </select>
+        </div>
+
+        <div class="tx-filter tx-filter-check">
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="txFilterUncategorized"
+                       name="uncategorized" value="true" th:checked="${filter.uncategorized}"/>
+                <label class="custom-control-label" for="txFilterUncategorized">Uncategorized only</label>
+            </div>
+        </div>
+
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterAccountType">Account type</label>
+            <select id="txFilterAccountType" name="accountType" class="form-control nkap-input">
+                <option value="">All types</option>
+                <option th:each="type : ${accountTypes}"
+                        th:value="${type.name()}"
+                        th:text="${#strings.capitalize(#strings.toLowerCase(type.name()))}"
+                        th:selected="${filter.accountType == type}">Checking</option>
+            </select>
+        </div>
+
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterAccount">Account</label>
+            <select id="txFilterAccount" name="accountId" class="form-control nkap-input">
+                <option value="">All accounts</option>
+                <option th:each="account : ${accounts}"
+                        th:value="${account.id}"
+                        th:text="${account.name}"
+                        th:attr="data-account-type=${account.accountType.name()}"
+                        th:selected="${filter.accountId == account.id}">Account</option>
+            </select>
+        </div>
+
+        <div class="tx-filter">
+            <label class="tx-filter-label" for="txFilterType">Type</label>
+            <select id="txFilterType" name="type" class="form-control nkap-input">
+                <option th:each="t : ${transactionTypes}"
+                        th:value="${t.name()}"
+                        th:text="${t.label}"
+                        th:selected="${filter.type == t}">Standard</option>
+            </select>
+        </div>
+
+        <input type="hidden" id="txFilterSort" name="sort" th:value="${filter.sort.name()}"/>
+
+        <a href="/transactions" class="btn tx-filter-reset" title="Clear all filters">
+            <i class="fas fa-undo-alt mr-1"></i> Reset
+        </a>
+    </div>
+</form>
+
+</body>
+</html>
