@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/css/budget-header.css"/>
     <link rel="stylesheet" href="/css/budget-sidebar.css"/>
     <link rel="stylesheet" href="/css/budget-modals.css"/>
+    <link rel="stylesheet" href="/css/budget-bulk-upload.css"/>
     <link rel="stylesheet" href="/css/budget-vendor-overrides.css"/>
     <link rel="stylesheet" href="/css/transactions-page.css"/>
 </head>
@@ -22,11 +23,23 @@
             </span>
         </div>
 
-        <div class="col-9 month-col d-flex align-items-center px-4">
+        <div class="col-6 month-col d-flex align-items-center px-4">
             <h5 class="bree-serif tx-page-title mb-0">
                 Transactions
                 <span class="tx-page-period" th:text="'· ' + ${periodLabel}">· October 2026</span>
             </h5>
+        </div>
+
+        <div class="col-3 actions-col d-flex align-items-center justify-content-center">
+            <button class="btn btn-header btn-primary-nkap mr-2" id="btnAddTransaction"
+                    title="Add Transaction"
+                    onclick="openAddTransactionModal()">
+                <i class="fas fa-plus mr-1"></i> Add Transaction
+            </button>
+            <button class="btn btn-header btn-outline-nkap mr-2" id="btnBulkUpload" title="Bulk Upload"
+                    onclick="openBulkUploadModal()">
+                <i class="fas fa-upload mr-1"></i> Bulk Upload
+            </button>
         </div>
 
     </div>
@@ -99,7 +112,14 @@
     </div>
 </div>
 
+<th:block th:replace="~{fragments/transaction-modals :: add-transaction-modal(false)}"></th:block>
+<th:block th:replace="~{fragments/transaction-modals :: bulk-upload-modal}"></th:block>
+
 <th:block th:replace="~{fragments/header :: scripts}"></th:block>
+<script src="/js/nkap-core.js"></script>
+<script src="/js/nkap-transactions.js"></script>
+<script src="/js/nkap-bulk-upload.js"></script>
+<script src="/js/nkap-modal-bindings.js"></script>
 <script src="/js/nkap-transactions-page.js"></script>
 
 </body>

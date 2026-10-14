@@ -12,4 +12,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByGroupId(@Param("groupId") Long groupId);
 
     List<Category> findDistinctByGroup_Budgets_AppUserId(Long appUserId);
+
+    boolean existsByIdAndGroup_Budgets_AppUserId(Long categoryId, Long appUserId);
 }

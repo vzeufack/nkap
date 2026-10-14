@@ -67,7 +67,11 @@ function saveTransaction() {
         budgetId:        budgetIdInput  && budgetIdInput.value  ? Number.parseInt(budgetIdInput.value, 10)  : null
     };
 
-    Nkap.http.postJson('/transactions', 'POST', payload)
+    // The budget page renders #txBudgetId and saves into that budget. Pages without it
+    // (the transactions page) let the server pick — or create — the budget for the date.
+    var url = budgetIdInput ? '/transactions' : '/transactions/by-date';
+
+    Nkap.http.postJson(url, 'POST', payload)
         .then(function () {
             $('#addTransactionModal').modal('hide');
             Nkap.ui.dispatchGroupSaved();

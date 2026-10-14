@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<body>
+
+<!--
+  Modals shared by the budget page (home.html) and the transactions page.
+  add-transaction-modal(budgetScoped):
+    true  — renders #txBudgetId; saves go to POST /transactions against that budget.
+    false — no budget input; saves go to POST /transactions/by-date, which finds or
+            creates the budget for the transaction's month.
+  Both expect ${accounts}; the add modal also expects ${categoryOptions} (group name → categories).
+-->
+
+<!-- ══ Add Transaction Modal ══ -->
+<div class="modal fade" id="addTransactionModal" th:fragment="add-transaction-modal(budgetScoped)" tabindex="-1" role="dialog"
+     aria-labelledby="transactionModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="transactionModalTitle">New Transaction</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="form-row mb-3">
+                    <div class="form-group col-7 mb-0">
+                        <label class="nkap-input-label" for="txAmountInput">Amount</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text nkap-input-prefix">$</span>
+                            </div>
+                            <input type="number" id="txAmountInput" class="form-control nkap-input"
+                                   placeholder="0.00" min="0" step="0.01" autocomplete="off"/>
+                        </div>
+                        <div class="invalid-feedback d-block" id="txAmountError"></div>
+                    </div>
+                    <div class="form-group col-5 mb-0">
+                        <label class="nkap-input-label" for="txTypeSelect">Type</label>
+                        <select id="txTypeSelect" class="form-control nkap-input">
+                            <option value="DEBIT">Debit</option>
+                            <option value="CREDIT">Credit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txDateInput">Date</label>
+                    <input type="date" id="txDateInput" class="form-control nkap-input"/>
+                    <div class="invalid-feedback" id="txDateError"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txAccountSelect">
+                        Account <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="txAccountSelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                        <option th:each="account : ${accounts}"
+                                th:value="${account.id}"
+                                th:text="${account.name}">Checking</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txCategorySelect">
+                        Category <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <select id="txCategorySelect" class="form-control nkap-input">
+                        <option value="">— None —</option>
+                        <optgroup th:each="entry : ${categoryOptions}"
+                                  th:label="${entry.key}">
+                            <option th:each="category : ${entry.value}"
+                                    th:value="${category.id}"
+                                    th:text="${category.name}">Category</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="nkap-input-label" for="txDescriptionInput">
+                        Description <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <input type="text" id="txDescriptionInput" class="form-control nkap-input"
+                           placeholder="e.g. Grocery run, Netflix subscription…" maxlength="100" autocomplete="off"/>
+                    <div class="invalid-feedback d-block" id="txDescriptionError"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="nkap-input-label" for="txNoteInput">
+                        Note <span class="text-muted" style="font-weight:normal;">(optional)</span>
+                    </label>
+                    <textarea id="txNoteInput" class="form-control nkap-input" rows="2"
+                              placeholder="Additional details…" maxlength="500" style="resize:none;"></textarea>
+                    <div class="invalid-feedback d-block" id="txNoteError"></div>
+                </div>
+                <input type="hidden" id="txBudgetId" th:if="${budgetScoped}" th:value="${budget?.id}"/>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-save" id="btnSaveTransaction" onclick="saveTransaction()">
+                    <span id="btnSaveTransactionSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnSaveTransactionIcon"></i>
+                    Save Transaction
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Bulk Upload Modal ══ -->
+<div class="modal fade" id="bulkUploadModal" th:fragment="bulk-upload-modal" tabindex="-1" role="dialog"
+     aria-labelledby="bulkUploadModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content nkap-modal">
+            <div class="modal-header nkap-modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-icon-circle">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h5 class="modal-title bree-serif" id="bulkUploadModalTitle">Bulk Upload Transactions</h5>
+                </div>
+                <button type="button" class="close nkap-modal-close" data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body nkap-modal-body">
+                <div class="upload-error-list d-none" id="bulkUploadErrorList"></div>
+
+                <div id="bulkUploadFormScreen">
+                    <div class="form-group mb-3">
+                        <label class="nkap-input-label" for="bulkUploadAccountSelect">Account</label>
+                        <select id="bulkUploadAccountSelect" class="form-control nkap-input">
+                            <option value="">— Select an account —</option>
+                            <option th:each="account : ${accounts}"
+                                    th:value="${account.id}"
+                                    th:text="${account.name}">Checking</option>
+                        </select>
+                        <div class="invalid-feedback d-block" id="bulkUploadAccountError"></div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="nkap-input-label" for="bulkUploadFileInput">CSV File</label>
+                        <input type="file" id="bulkUploadFileInput" class="form-control-file nkap-input"
+                               accept=".csv,text/csv"/>
+                        <div class="invalid-feedback d-block" id="bulkUploadFileError"></div>
+                        <small class="text-muted">
+                            Currently supports Checking, Savings, and Credit accounts from Bank of America,
+                            and Credit accounts from Capital One.
+                        </small>
+                    </div>
+                    <div class="form-row mb-0">
+                        <div class="form-group col-6">
+                            <label class="nkap-input-label" for="bulkUploadStartDateInput">Start Date (optional)</label>
+                            <input type="date" id="bulkUploadStartDateInput" class="form-control nkap-input"/>
+                        </div>
+                        <div class="form-group col-6">
+                            <label class="nkap-input-label" for="bulkUploadEndDateInput">End Date (optional)</label>
+                            <input type="date" id="bulkUploadEndDateInput" class="form-control nkap-input"/>
+                        </div>
+                        <div class="invalid-feedback d-block col-12" id="bulkUploadDateRangeError"></div>
+                    </div>
+                    <small class="text-muted">Leave blank to import all transactions found in the file.</small>
+                </div>
+
+                <div id="bulkUploadPreviewScreen" class="d-none">
+                    <div class="upload-budgets-note d-none" id="bulkUploadBudgetsNote"></div>
+                    <div style="max-height: 320px; overflow-y: auto;">
+                        <table class="upload-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Direction</th>
+                                    <th class="cat-col-number">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkUploadPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer nkap-modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modal-cancel d-none" id="btnBulkUploadBack"
+                        onclick="backToBulkUploadForm()">Back</button>
+                <button type="button" class="btn btn-modal-save" id="btnBulkUploadPreview" onclick="previewBulkUpload()">
+                    <span id="btnBulkUploadPreviewSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnBulkUploadPreviewIcon"></i>
+                    Upload &amp; Preview
+                </button>
+                <button type="button" class="btn btn-modal-save d-none" id="btnBulkUploadConfirm" onclick="confirmBulkUpload()">
+                    <span id="btnBulkUploadConfirmSpinner" class="spinner-border spinner-border-sm mr-2 d-none" role="status"></span>
+                    <i class="fas fa-check mr-2" id="btnBulkUploadConfirmIcon"></i>
+                    Confirm Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

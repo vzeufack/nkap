@@ -5,6 +5,7 @@ import com.kmercoders.nkap.account.AccountService;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
+import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryService;
 import com.kmercoders.nkap.financialinstitution.FinancialInstitutionService;
 import com.kmercoders.nkap.transaction.Direction;
@@ -15,6 +16,7 @@ import com.kmercoders.nkap.transaction.TransactionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -79,6 +81,7 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
+            model.addAttribute("categoryOptions", toCategoryOptions(categoriesByGroup));
 
             List<TransactionSummaryDTO> transactions = transactionService.getTransactionsForBudget(budget.getId());
             model.addAttribute("transactions", transactions);
@@ -125,6 +128,7 @@ public class BudgetController {
                     Collectors.toList()
                 ));
             model.addAttribute("categoriesByGroup", categoriesByGroup);
+            model.addAttribute("categoryOptions", toCategoryOptions(categoriesByGroup));
 
             List<TransactionSummaryDTO> transactions = transactionService.getTransactionsForBudget(budget.getId());
             model.addAttribute("transactions", transactions);
@@ -139,6 +143,15 @@ public class BudgetController {
         }
 
         return htmxRequest != null ? "fragments/budget-plan :: budget-plan" : "home";
+    }
+
+    /** Shape expected by the shared add-transaction modal's category dropdown: group name → categories. */
+    private Map<String, List<Category>> toCategoryOptions(Map<Long, List<BudgetCategory>> categoriesByGroup) {
+        Map<String, List<Category>> options = new LinkedHashMap<>();
+        categoriesByGroup.values().forEach(bcs -> bcs.forEach(bc -> options
+            .computeIfAbsent(bc.getCategory().getGroup().getName(), name -> new ArrayList<>())
+            .add(bc.getCategory())));
+        return options;
     }
 
     @GetMapping("/accounts-sidebar")

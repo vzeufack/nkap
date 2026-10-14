@@ -1,6 +1,8 @@
 package com.kmercoders.nkap.transaction;
 
+import com.kmercoders.nkap.account.AccountService;
 import com.kmercoders.nkap.appuser.AppUserService;
+import com.kmercoders.nkap.category.CategoryService;
 
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -23,10 +25,15 @@ public class TransactionPageController {
 
     private final TransactionService transactionService;
     private final AppUserService appUserService;
+    private final AccountService accountService;
+    private final CategoryService categoryService;
 
-    public TransactionPageController(TransactionService transactionService, AppUserService appUserService) {
+    public TransactionPageController(TransactionService transactionService, AppUserService appUserService,
+                                     AccountService accountService, CategoryService categoryService) {
         this.transactionService = transactionService;
         this.appUserService     = appUserService;
+        this.accountService     = accountService;
+        this.categoryService    = categoryService;
     }
 
     @GetMapping("/transactions")
@@ -42,6 +49,8 @@ public class TransactionPageController {
         }
 
         model.addAttribute("appUser", appUserService.getAuthenticatedUser());
+        model.addAttribute("accounts", accountService.getAccountsForCurrentUser());
+        model.addAttribute("categoryOptions", categoryService.getCategoryOptionsForCurrentUser());
         return "transactions";
     }
 }

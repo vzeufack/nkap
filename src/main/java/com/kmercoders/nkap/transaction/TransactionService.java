@@ -6,10 +6,12 @@ import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.budget.Budget;
 import com.kmercoders.nkap.budget.BudgetRepository;
+import com.kmercoders.nkap.budget.BudgetService;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.BudgetCategoryRepository;
 import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryRepository;
+import com.kmercoders.nkap.group.Group;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,6 +37,7 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
     private final BudgetCategoryRepository budgetCategoryRepository;
     private final BudgetRepository budgetRepository;
+    private final BudgetService budgetService;
     private final AppUserService appUserService;
 
     public TransactionService(TransactionRepository transactionRepository,
@@ -42,12 +45,14 @@ public class TransactionService {
                               CategoryRepository categoryRepository,
                               BudgetCategoryRepository budgetCategoryRepository,
                               BudgetRepository budgetRepository,
+                              BudgetService budgetService,
                               AppUserService appUserService) {
         this.transactionRepository    = transactionRepository;
         this.accountRepository        = accountRepository;
         this.categoryRepository       = categoryRepository;
         this.budgetCategoryRepository = budgetCategoryRepository;
         this.budgetRepository         = budgetRepository;
+        this.budgetService            = budgetService;
         this.appUserService           = appUserService;
     }
 
@@ -159,6 +164,61 @@ public class TransactionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
         }
 
+        return saveStandardTransaction(request, account, budgetCategory, budget);
+    }
+
+    /**
+     * Creates a STANDARD transaction without the caller choosing a budget: the budget for the
+     * transaction date's month is used, and created if it doesn't exist yet. A category that
+     * isn't linked to that budget (never was, or was unlinked) is linked to it again, along
+     * with its group, with a zero allocation.
+     */
+    @Transactional
+    public TransactionDTO createTransactionForDate(TransactionDetailsRequest request) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        // Ownership checks run before the budget lookup so a rejected request never
+        // leaves an auto-created budget behind.
+        Account account = null;
+        if (request.getAccountId() != null) {
+            account = accountRepository.findByIdAndAppUser(request.getAccountId(), appUser)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        }
+
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            if (!categoryRepository.existsByIdAndGroup_Budgets_AppUserId(request.getCategoryId(), appUser.getId())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
+            }
+            category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        }
+
+        LocalDate date = request.getTransactionDate();
+        Budget budget = budgetRepository.findByAppUserIdAndMonthAndYear(appUser.getId(), date.getMonth(), date.getYear())
+            .orElseGet(() -> budgetService.createBudget(appUser, date.getMonth(), date.getYear()));
+
+        BudgetCategory budgetCategory = null;
+        if (category != null) {
+            budgetCategory = findOrLinkBudgetCategory(budget, category);
+        }
+
+        return saveStandardTransaction(request, account, budgetCategory, budget);
+    }
+
+    private BudgetCategory findOrLinkBudgetCategory(Budget budget, Category category) {
+        return budgetCategoryRepository.findByBudgetIdAndCategoryId(budget.getId(), category.getId())
+            .orElseGet(() -> {
+                Group group = category.getGroup();
+                if (!budget.getGroups().contains(group)) {
+                    budget.addGroup(group);
+                }
+                return budgetCategoryRepository.save(new BudgetCategory(budget, category, BigDecimal.ZERO));
+            });
+    }
+
+    private TransactionDTO saveStandardTransaction(TransactionDetailsRequest request, Account account,
+                                                   BudgetCategory budgetCategory, Budget budget) {
         Transaction transaction = new Transaction(
             request.getAmount(),
             request.getTransactionDate(),

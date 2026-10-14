@@ -206,6 +206,39 @@ class TransactionPageControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
+    void getTransactions_rendersAddAndBulkUploadButtonsWithoutBudgetScope() throws Exception {
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"btnAddTransaction\"")))
+                .andExpect(content().string(containsString("id=\"btnBulkUpload\"")))
+                .andExpect(content().string(containsString("id=\"addTransactionModal\"")))
+                .andExpect(content().string(containsString("id=\"bulkUploadModal\"")))
+                // No budget input: the modal saves via /transactions/by-date instead.
+                .andExpect(content().string(not(containsString("id=\"txBudgetId\""))));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void getTransactions_categoryDropdownListsCategoriesAcrossAllBudgets() throws Exception {
+        Group savings = groupRepository.save(new Group("Savings Goals"));
+        categoryRepository.save(new Category("Vacation", savings));
+        previousBudget.addGroup(savings);
+        previousBudget = budgetRepository.save(previousBudget);
+
+        Group living = budgetCategory.getCategory().getGroup();
+        currentBudget.addGroup(living);
+        currentBudget = budgetRepository.save(currentBudget);
+
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("label=\"Living Expenses\"")))
+                .andExpect(content().string(containsString("label=\"Savings Goals\"")))
+                .andExpect(content().string(containsString(">Vacation</option>")))
+                .andExpect(content().string(containsString(">Groceries</option>")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
     void getTransactions_withNoTransactions_showsEmptyState() throws Exception {
         mockMvc.perform(get(URL))
                 .andExpect(status().isOk())

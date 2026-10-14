@@ -46,6 +46,11 @@
     color: var(--nkap-red);
 }
 
+/* .cat-col-number lives in budget-plan.css, which the transactions page doesn't load. */
+.upload-preview-table .cat-col-number {
+    text-align: right;
+}
+
 .upload-budgets-note {
     padding: 10px 14px;
     border-radius: 6px;

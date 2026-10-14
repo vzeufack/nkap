@@ -1,4 +1,4 @@
-/* nkap-transactions-page.js — Transactions page: details popup.
+/* nkap-transactions-page.js — Transactions page: details popup and table refresh.
    The table is swapped by htmx when paging, so the click handler is delegated
    from document rather than bound to each row's button. */
 
@@ -41,6 +41,16 @@
 
         $('#transactionDetailsModal').modal('show');
     }
+
+    // Add Transaction / Bulk Upload dispatch nkap:groupSaved on success — reload the
+    // table at the current URL so the user stays on the page they were viewing.
+    document.addEventListener('nkap:groupSaved', function () {
+        htmx.ajax('GET', location.pathname + location.search, {
+            target:  '#transactions-table-container',
+            swap:    'innerHTML',
+            headers: { 'HX-Request': 'true' }
+        });
+    });
 
     document.addEventListener('click', function (event) {
         const btn = event.target.closest('.tx-details-btn');
