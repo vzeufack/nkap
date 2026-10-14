@@ -184,6 +184,66 @@
 .tx-edit-btn:hover    { background: var(--panel-bg); color: var(--nkap-blue); }
 .tx-delete-btn:hover  { background: #fdecea;         color: var(--nkap-red); }
 
+/* ── Row selection / bulk actions ── */
+.tx-table-select {
+    width: 1%;
+    padding-right: 0 !important;
+    text-align: center;
+}
+
+.tx-table-select input {
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.tx-table tbody tr.selected {
+    background: var(--nkap-blue-light);
+}
+
+.tx-bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: var(--nkap-blue-light);
+    border-bottom: 1.5px solid var(--panel-border);
+    font-size: 0.85rem;
+}
+
+.tx-bulk-count {
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.tx-bulk-delete {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.75rem;
+    color: #fff;
+    background: var(--nkap-red);
+    border-radius: 8px;
+}
+
+.tx-bulk-delete:hover:not(:disabled) {
+    color: #fff;
+    filter: brightness(0.92);
+}
+
+.tx-bulk-clear {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.75rem;
+    color: var(--text-muted);
+    background: none;
+}
+
+.tx-bulk-clear:hover {
+    color: var(--nkap-blue);
+}
+
+.tx-bulk-error {
+    color: var(--nkap-red);
+}
+
 /* ── Sortable headers ── */
 .tx-sort-toggle {
     background: none;

@@ -60,6 +60,68 @@
         }
     });
 
+    // ── Row selection / bulk delete ──────────────────────────────────────────
+    // Everything here lives inside the swapped table fragment, so look elements up on each
+    // event; a swap (paging, filtering, refresh) naturally clears the selection.
+
+    function selectedIds() {
+        return Array.from(document.querySelectorAll('.tx-select:checked')).map(cb => Number.parseInt(cb.value, 10));
+    }
+
+    function syncSelection() {
+        const boxes   = Array.from(document.querySelectorAll('.tx-select'));
+        const checked = boxes.filter(cb => cb.checked);
+        boxes.forEach(cb => cb.closest('tr').classList.toggle('selected', cb.checked));
+
+        const selectAll = document.getElementById('txSelectAll');
+        if (selectAll) {
+            selectAll.checked       = boxes.length > 0 && checked.length === boxes.length;
+            selectAll.indeterminate = checked.length > 0 && checked.length < boxes.length;
+        }
+
+        const bar = document.getElementById('txBulkBar');
+        if (bar) {
+            bar.hidden = checked.length === 0;
+            document.getElementById('txBulkCount').textContent = checked.length + ' selected';
+            document.getElementById('txBulkError').textContent = '';
+        }
+    }
+
+    document.addEventListener('change', function (event) {
+        if (event.target.id === 'txSelectAll') {
+            document.querySelectorAll('.tx-select').forEach(cb => { cb.checked = event.target.checked; });
+            syncSelection();
+        } else if (event.target.classList.contains('tx-select')) {
+            syncSelection();
+        }
+    });
+
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('#btnBulkClear')) {
+            document.querySelectorAll('.tx-select').forEach(cb => { cb.checked = false; });
+            syncSelection();
+            return;
+        }
+        if (!event.target.closest('#btnBulkDelete')) return;
+
+        const ids = selectedIds();
+        if (ids.length === 0) return;
+        const noun = ids.length === 1 ? 'transaction' : 'transactions';
+        if (!confirm('Delete ' + ids.length + ' ' + noun + '? This cannot be undone.')) return;
+
+        Nkap.ui.setBusy('btnBulkDelete', 'btnBulkDeleteSpinner', 'btnBulkDeleteIcon', true);
+        Nkap.http.postJson('/transactions/bulk-delete', 'POST', { ids: ids })
+            .then(function () {
+                Nkap.ui.dispatchGroupSaved(); // reloads the table, which clears the selection
+            })
+            .catch(function (err) {
+                const error = document.getElementById('txBulkError');
+                if (error) error.textContent = 'Could not delete the selected transactions. Please refresh and try again.';
+                console.error('Error bulk deleting transactions:', err);
+                Nkap.ui.setBusy('btnBulkDelete', 'btnBulkDeleteSpinner', 'btnBulkDeleteIcon', false);
+            });
+    });
+
     // ── Filter bar ──────────────────────────────────────────────────────────
 
     const form = document.getElementById('txFilterForm');

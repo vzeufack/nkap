@@ -14,11 +14,28 @@
         </th:block>
     </div>
 
-    <th:block th:if="${txPage.totalElements > 0}">
+    <th:block th:if="${txPage.totalElements > 0}"
+              th:with="hasSelectable=${!txPage.content.?[transactionType.name() == 'STANDARD'].isEmpty()}">
+        <!-- Shown by nkap-transactions-page.js while rows are selected. Selection covers the
+             current page only and is cleared whenever the table is swapped. -->
+        <div class="tx-bulk-bar" id="txBulkBar" hidden>
+            <span class="tx-bulk-count" id="txBulkCount">0 selected</span>
+            <button type="button" class="btn tx-bulk-delete" id="btnBulkDelete">
+                <span id="btnBulkDeleteSpinner" class="spinner-border spinner-border-sm mr-1 d-none" role="status"></span>
+                <i class="fas fa-trash-alt mr-1" id="btnBulkDeleteIcon"></i> Delete selected
+            </button>
+            <button type="button" class="btn tx-bulk-clear" id="btnBulkClear">Clear selection</button>
+            <span class="tx-bulk-error" id="txBulkError"></span>
+        </div>
+
         <div class="tx-table-scroll">
             <table class="table tx-table mb-0">
                 <thead>
                     <tr>
+                        <th scope="col" class="tx-table-select">
+                            <input type="checkbox" id="txSelectAll" th:if="${hasSelectable}"
+                                   title="Select all on this page" aria-label="Select all on this page"/>
+                        </th>
                         <th scope="col" th:with="active=${filter.sort.name().startsWith('DATE')}">
                             <button type="button" class="tx-sort-toggle"
                                     th:classappend="${active} ? 'active' : ''"
@@ -53,6 +70,11 @@
                     <tr th:each="tx : ${txPage.content}"
                         th:with="sign=${tx.direction.name() == 'DEBIT' ? '−' : '+'},
                                  amountText=${'$' + #numbers.formatDecimal(tx.amount, 1, 'COMMA', 2, 'POINT')}">
+                        <td class="tx-table-select">
+                            <!-- Only standard transactions can be deleted, so only they're selectable. -->
+                            <input type="checkbox" class="tx-select" th:if="${tx.transactionType.name() == 'STANDARD'}"
+                                   th:value="${tx.id}" aria-label="Select transaction"/>
+                        </td>
                         <td class="tx-table-date" th:text="${#temporals.format(tx.transactionDate, 'MMM d, yyyy')}">Jan 1, 2026</td>
                         <td class="tx-table-description"
                             th:text="${tx.description ?: '—'}"

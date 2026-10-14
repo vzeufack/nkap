@@ -427,6 +427,34 @@ class TransactionPageControllerTest {
                 .andExpect(content().string(containsString("<option value=\"ALL\">All types</option>")));
     }
 
+    // ── Selection / bulk delete ────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void selection_onlyStandardRowsHaveCheckboxes() throws Exception {
+        Transaction standard = save("10.00", Direction.DEBIT, TransactionType.STANDARD, currentBudget, currentMonth.atDay(2), "standard");
+        Transaction transfer = save("10.00", Direction.DEBIT, TransactionType.TRANSFER, currentBudget, currentMonth.atDay(1), "transfer");
+
+        mockMvc.perform(get(URL).param("type", "ALL"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"txSelectAll\"")))
+                .andExpect(content().string(containsString("id=\"txBulkBar\"")))
+                .andExpect(content().string(matchesPattern(
+                    "(?s).*class=\"tx-select\"\\s+value=\"" + standard.getId() + "\".*")))
+                .andExpect(content().string(not(matchesPattern(
+                    "(?s).*class=\"tx-select\"\\s+value=\"" + transfer.getId() + "\".*"))));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void selection_selectAllHiddenWhenNoRowIsSelectable() throws Exception {
+        save("10.00", Direction.DEBIT, TransactionType.TRANSFER, currentBudget, currentMonth.atDay(1), "transfer");
+
+        mockMvc.perform(get(URL).param("type", "TRANSFER"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("id=\"txSelectAll\""))));
+    }
+
     // ── Filters: group / category / account ────────────────────────────────────
 
     @Test

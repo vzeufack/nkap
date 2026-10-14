@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -20,6 +21,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
     List<Transaction> findByBudgetIdAndTransactionType(Long budgetId, TransactionType transactionType);
     List<Transaction> findByBudgetIdOrderByTransactionDateDesc(Long budgetId);
     Optional<Transaction> findByIdAndBudgetAppUserId(Long id, Long appUserId);
+    List<Transaction> findAllByIdInAndBudgetAppUserId(Collection<Long> ids, Long appUserId);
     List<Transaction> findByTransferId(UUID transferId);
 
     /** Same as the inherited method, but loads the associations the transactions table displays in one query. */

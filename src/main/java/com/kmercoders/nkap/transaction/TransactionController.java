@@ -84,6 +84,22 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.updateTransactionForDate(id, request));
     }
 
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<?> deleteTransactions(@Valid @RequestBody BulkDeleteTransactionsRequest request,
+                                                BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = bindingResult.getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                    fe -> fe.getField(),
+                    fe -> fe.getDefaultMessage(),
+                    (first, second) -> first
+                ));
+            return ResponseEntity.badRequest().body(errors);
+        }
+
+        return ResponseEntity.ok(Map.of("deleted", transactionService.deleteTransactions(request.getIds())));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTransaction(@PathVariable("id") Long id) {
         transactionService.deleteTransaction(id);

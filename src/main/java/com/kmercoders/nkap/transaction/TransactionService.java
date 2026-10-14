@@ -23,7 +23,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -356,6 +359,35 @@ public class TransactionService {
         applyBalanceDelta(transaction.getAccount(), transaction.getBudgetCategory(), signedAmount.negate());
 
         transactionRepository.delete(transaction);
+    }
+
+    /**
+     * Deletes the given STANDARD transactions, reverting their account and category balances.
+     * All or nothing: if any id is missing or belongs to another user the whole request is a 404
+     * (without saying which id), and any non-STANDARD transaction makes it a 400, since adjustments
+     * and transfers are system-generated.
+     *
+     * @return the number of transactions deleted
+     */
+    @Transactional
+    public int deleteTransactions(Collection<Long> transactionIds) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+        Set<Long> ids = new HashSet<>(transactionIds);
+
+        List<Transaction> transactions = transactionRepository.findAllByIdInAndBudgetAppUserId(ids, appUser.getId());
+        if (transactions.size() != ids.size()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found");
+        }
+        if (transactions.stream().anyMatch(t -> t.getTransactionType() != TransactionType.STANDARD)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only standard transactions can be bulk deleted");
+        }
+
+        for (Transaction transaction : transactions) {
+            BigDecimal signedAmount = signedAmount(transaction.getAmount(), transaction.getDirection());
+            applyBalanceDelta(transaction.getAccount(), transaction.getBudgetCategory(), signedAmount.negate());
+        }
+        transactionRepository.deleteAll(transactions);
+        return transactions.size();
     }
 
     private BigDecimal signedAmount(BigDecimal amount, Direction direction) {
