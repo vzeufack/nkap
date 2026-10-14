@@ -33,11 +33,13 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * POST /transactions/by-date — the transactions page's single add, where the budget is derived
- * from the transaction date (created if missing) and unlinked categories are linked again.
+ * POST /transactions/by-date and PUT /transactions/{id}/by-date — the transactions page's add and
+ * edit, where the budget is derived from the transaction date (created if missing) and unlinked
+ * categories are linked again.
  *
  * Unlike the other controller tests, budgets/groups/categories are reseeded before every test:
  * the endpoint itself creates budgets and links, so state from one test would leak into the next.
@@ -62,6 +64,7 @@ class TransactionByDateControllerTest {
     private static final String EMAIL       = "tx_by_date_user@example.com";
     private static final String OTHER_EMAIL = "tx_by_date_other@example.com";
     private static final String URL         = "/transactions/by-date";
+    private static final String UPDATE_URL  = "/transactions/{id}/by-date";
 
     private AppUser user;
     private AppUser otherUser;
@@ -291,6 +294,152 @@ class TransactionByDateControllerTest {
     @Test
     void createForDate_withoutAuthentication_returns401or302() throws Exception {
         mockMvc.perform(post(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request("10.00", LocalDate.of(2026, Month.JANUARY, 5)))))
+                .andExpect(status().is(anyOf(is(401), is(302))));
+    }
+
+    // ── Update ─────────────────────────────────────────────────────────────────
+
+    /** A $20 debit in January on the account and category, with balances already applied. */
+    private Transaction seedJanuaryDebit() {
+        BudgetCategory januaryGroceries = budgetCategoryRepository
+            .findByBudgetIdAndCategoryId(januaryBudget.getId(), category.getId()).orElseThrow();
+        Transaction t = new Transaction(new BigDecimal("20.00"), LocalDate.of(2026, Month.JANUARY, 10), Direction.DEBIT,
+            TransactionType.STANDARD, null, account, januaryGroceries, januaryBudget);
+        t = transactionRepository.save(t);
+
+        account.setBalance(new BigDecimal("980.00"));
+        accountRepository.save(account);
+        category.setBalance(new BigDecimal("-20.00"));
+        categoryRepository.save(category);
+        return t;
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_movingToMonthWithoutBudget_createsBudgetAndRebalances() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+
+        TransactionDetailsRequest req = request("50.00", LocalDate.of(2026, Month.JUNE, 2));
+        req.setDescription("Moved");
+        req.setAccountId(account.getId());
+        req.setCategoryId(category.getId());
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id",              is(existing.getId().intValue())))
+                .andExpect(jsonPath("$.transactionDate", is("2026-06-02")))
+                .andExpect(jsonPath("$.description",     is("Moved")));
+
+        Budget june = budgetFor(Month.JUNE, 2026);
+        Transaction updated = transactionRepository.findById(existing.getId()).orElseThrow();
+        assertThat(updated.getBudget().getId()).isEqualTo(june.getId());
+        assertThat(budgetCategoryRepository.findByBudgetIdAndCategoryId(june.getId(), category.getId())).isPresent();
+        // Old -20 reverted, new -50 applied.
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance())
+            .isEqualByComparingTo("950.00");
+        assertThat(categoryRepository.findById(category.getId()).orElseThrow().getBalance())
+            .isEqualByComparingTo("-50.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_withCategoryUnlinkedFromBudget_relinksCategory() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+        Budget february = budgetRepository.save(new Budget(Month.FEBRUARY, 2026, user));
+
+        TransactionDetailsRequest req = request("20.00", LocalDate.of(2026, Month.FEBRUARY, 14));
+        req.setCategoryId(category.getId());
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.budgetId", is(february.getId().intValue())));
+
+        assertThat(groupRepository.existsByIdAndBudgetsId(group.getId(), february.getId())).isTrue();
+        assertThat(budgetCategoryRepository.findByBudgetIdAndCategoryId(february.getId(), category.getId())).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_clearingAccountAndCategory_revertsTheirBalances() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request("20.00", LocalDate.of(2026, Month.JANUARY, 10)))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId").doesNotExist())
+                .andExpect(jsonPath("$.categoryId").doesNotExist());
+
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance())
+            .isEqualByComparingTo("1000.00");
+        assertThat(categoryRepository.findById(category.getId()).orElseThrow().getBalance())
+            .isEqualByComparingTo("0");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_withMissingRequiredFields_returns400WithFieldErrors() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.amount",          notNullValue()))
+                .andExpect(jsonPath("$.transactionDate", notNullValue()))
+                .andExpect(jsonPath("$.direction",       notNullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_withNonExistentTransaction_returns404() throws Exception {
+        mockMvc.perform(put(UPDATE_URL, 999_999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request("10.00", LocalDate.of(2026, Month.JANUARY, 5)))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = OTHER_EMAIL)
+    void updateForDate_withAnotherUsersTransaction_returns404AndCreatesNoBudget() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request("10.00", LocalDate.of(2026, Month.MAY, 5)))))
+                .andExpect(status().isNotFound());
+
+        assertThat(budgetRepository.findByAppUserIdAndMonthAndYear(otherUser.getId(), Month.MAY, 2026)).isEmpty();
+        assertThat(transactionRepository.findById(existing.getId()).orElseThrow().getAmount())
+            .isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void updateForDate_withAnotherUsersCategory_returns404AndLeavesTransactionUnchanged() throws Exception {
+        Transaction existing = seedJanuaryDebit();
+        TransactionDetailsRequest req = request("99.00", LocalDate.of(2026, Month.MAY, 5));
+        req.setCategoryId(otherCategory.getId());
+
+        mockMvc.perform(put(UPDATE_URL, existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isNotFound());
+
+        assertThat(budgetRepository.findByAppUserIdAndMonthAndYear(user.getId(), Month.MAY, 2026)).isEmpty();
+        assertThat(transactionRepository.findById(existing.getId()).orElseThrow().getAmount())
+            .isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    void updateForDate_withoutAuthentication_returns401or302() throws Exception {
+        mockMvc.perform(put(UPDATE_URL, 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request("10.00", LocalDate.of(2026, Month.JANUARY, 5)))))
                 .andExpect(status().is(anyOf(is(401), is(302))));

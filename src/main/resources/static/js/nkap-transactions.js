@@ -106,7 +106,8 @@ function saveTransaction() {
 
 function openEditTransactionModal(btn) {
     document.getElementById('editTxId').value               = btn.dataset.id;
-    document.getElementById('editTxBudgetId').value         = btn.dataset.budgetId;
+    var editBudgetIdInput = document.getElementById('editTxBudgetId');
+    if (editBudgetIdInput) editBudgetIdInput.value = btn.dataset.budgetId;
     document.getElementById('editTxAmountInput').value      = btn.dataset.amount;
     document.getElementById('editTxTypeSelect').value       = btn.dataset.type;
     document.getElementById('editTxDateInput').value        = btn.dataset.date;
@@ -174,7 +175,10 @@ function updateTransaction() {
         budgetId:        budgetIdInput  && budgetIdInput.value  ? Number.parseInt(budgetIdInput.value, 10)  : null
     };
 
-    Nkap.http.postJson('/transactions/' + id, 'PUT', payload)
+    // Same rule as saveTransaction: no #editTxBudgetId means the server resolves the budget from the date.
+    var url = budgetIdInput ? '/transactions/' + id : '/transactions/' + id + '/by-date';
+
+    Nkap.http.postJson(url, 'PUT', payload)
         .then(function () {
             $('#editTransactionModal').modal('hide');
             Nkap.ui.dispatchGroupSaved();

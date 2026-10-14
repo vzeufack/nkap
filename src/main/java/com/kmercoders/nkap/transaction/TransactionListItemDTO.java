@@ -20,6 +20,8 @@ public class TransactionListItemDTO {
     private String categoryName;
     private String accountName;
     private AccountType accountType;
+    private Long accountId;
+    private Long categoryId;
     private Month budgetMonth;
     private int budgetYear;
 
@@ -39,6 +41,8 @@ public class TransactionListItemDTO {
         dto.categoryName    = t.getBudgetCategory() != null ? t.getBudgetCategory().getCategory().getName()            : null;
         dto.accountName     = t.getAccount()        != null ? t.getAccount().getName()                                 : null;
         dto.accountType     = t.getAccount()        != null ? t.getAccount().getType()                                 : null;
+        dto.accountId       = t.getAccount()        != null ? t.getAccount().getId()                                   : null;
+        dto.categoryId      = t.getBudgetCategory() != null ? t.getBudgetCategory().getCategory().getId()              : null;
         dto.budgetMonth     = t.getBudget().getMonth();
         dto.budgetYear      = t.getBudget().getYear();
         return dto;
@@ -56,6 +60,8 @@ public class TransactionListItemDTO {
     public String getCategoryName()            { return categoryName; }
     public String getAccountName()             { return accountName; }
     public AccountType getAccountType()        { return accountType; }
+    public Long getAccountId()                 { return accountId; }
+    public Long getCategoryId()                { return categoryId; }
     public Month getBudgetMonth()              { return budgetMonth; }
     public int getBudgetYear()                 { return budgetYear; }
 

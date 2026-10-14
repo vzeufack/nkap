@@ -68,10 +68,19 @@ public class TransactionService {
         PageRequest pageRequest = PageRequest.of(Math.max(page, 0), PAGE_SIZE,
             Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id")));
 
-        return transactionRepository
-            .findByBudgetAppUserIdAndTransactionTypeAndTransactionDateBetween(
-                appUser.getId(), TransactionType.STANDARD, period.atDay(1), period.atEndOfMonth(), pageRequest)
-            .map(TransactionListItemDTO::from);
+        Page<Transaction> result = findStandardTransactions(appUser, period, pageRequest);
+
+        // A page past the end (e.g. after deleting the only row on the last page) falls back to the last page.
+        if (result.isEmpty() && result.getTotalPages() > 0 && pageRequest.getPageNumber() >= result.getTotalPages()) {
+            result = findStandardTransactions(appUser, period, pageRequest.withPage(result.getTotalPages() - 1));
+        }
+
+        return result.map(TransactionListItemDTO::from);
+    }
+
+    private Page<Transaction> findStandardTransactions(AppUser appUser, YearMonth period, PageRequest pageRequest) {
+        return transactionRepository.findByBudgetAppUserIdAndTransactionTypeAndTransactionDateBetween(
+            appUser.getId(), TransactionType.STANDARD, period.atDay(1), period.atEndOfMonth(), pageRequest);
     }
 
     @Transactional
@@ -80,10 +89,6 @@ public class TransactionService {
 
         Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
-
-        Account oldAccount = transaction.getAccount();
-        BudgetCategory oldBudgetCategory = transaction.getBudgetCategory();
-        BigDecimal oldSignedAmount = signedAmount(transaction.getAmount(), transaction.getDirection());
 
         Account account = null;
         if (request.getAccountId() != null) {
@@ -115,7 +120,29 @@ public class TransactionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found in budget"));
         }
 
-        applyBalanceDelta(oldAccount, oldBudgetCategory, oldSignedAmount.negate());
+        return applyUpdate(transaction, request, account, budgetCategory, budget);
+    }
+
+    /**
+     * Updates a transaction without the caller choosing a budget — the by-date counterpart of
+     * {@link #updateTransaction}, with the same budget creation and category relinking rules as
+     * {@link #createTransactionForDate}.
+     */
+    @Transactional
+    public TransactionDTO updateTransactionForDate(Long transactionId, TransactionDetailsRequest request) {
+        AppUser appUser = appUserService.getAuthenticatedUser();
+
+        Transaction transaction = transactionRepository.findByIdAndBudgetAppUserId(transactionId, appUser.getId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+
+        DatedTarget target = resolveDatedTarget(appUser, request);
+        return applyUpdate(transaction, request, target.account(), target.budgetCategory(), target.budget());
+    }
+
+    private TransactionDTO applyUpdate(Transaction transaction, TransactionDetailsRequest request, Account account,
+                                       BudgetCategory budgetCategory, Budget budget) {
+        BigDecimal oldSignedAmount = signedAmount(transaction.getAmount(), transaction.getDirection());
+        applyBalanceDelta(transaction.getAccount(), transaction.getBudgetCategory(), oldSignedAmount.negate());
         applyBalanceDelta(account, budgetCategory, signedAmount(request.getAmount(), request.getDirection()));
 
         transaction.setAmount(request.getAmount());
@@ -176,7 +203,14 @@ public class TransactionService {
     @Transactional
     public TransactionDTO createTransactionForDate(TransactionDetailsRequest request) {
         AppUser appUser = appUserService.getAuthenticatedUser();
+        DatedTarget target = resolveDatedTarget(appUser, request);
+        return saveStandardTransaction(request, target.account(), target.budgetCategory(), target.budget());
+    }
 
+    /** Account, budget and budget-category a by-date create/update resolves to. */
+    private record DatedTarget(Account account, Budget budget, BudgetCategory budgetCategory) {}
+
+    private DatedTarget resolveDatedTarget(AppUser appUser, TransactionDetailsRequest request) {
         // Ownership checks run before the budget lookup so a rejected request never
         // leaves an auto-created budget behind.
         Account account = null;
@@ -203,7 +237,7 @@ public class TransactionService {
             budgetCategory = findOrLinkBudgetCategory(budget, category);
         }
 
-        return saveStandardTransaction(request, account, budgetCategory, budget);
+        return new DatedTarget(account, budget, budgetCategory);
     }
 
     private BudgetCategory findOrLinkBudgetCategory(Budget budget, Category category) {

@@ -71,25 +71,30 @@
 .tx-table-amount.credit { color: var(--nkap-green); }
 
 .tx-table-actions {
-    width: 48px;
+    width: 1%;
+    white-space: nowrap;
     text-align: center;
 }
 
-.tx-details-btn {
+.tx-action-btn {
     background: none;
     border: none;
     color: #aab;
-    font-size: 1rem;
+    font-size: 0.95rem;
     padding: 4px 6px;
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
 
-.tx-details-btn:hover {
-    background: var(--panel-bg);
-    color: var(--nkap-blue);
+.tx-action-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
+
+.tx-details-btn:hover { background: var(--panel-bg); color: var(--nkap-blue); }
+.tx-edit-btn:hover    { background: var(--panel-bg); color: var(--nkap-blue); }
+.tx-delete-btn:hover  { background: #fdecea;         color: var(--nkap-red); }
 
 /* ── Empty state ── */
 .tx-table-empty {

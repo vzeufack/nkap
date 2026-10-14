@@ -21,7 +21,7 @@
                         <th scope="col">Category</th>
                         <th scope="col">Account Type</th>
                         <th scope="col">Account</th>
-                        <th scope="col" class="tx-table-actions"><span class="sr-only">Details</span></th>
+                        <th scope="col" class="tx-table-actions"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,7 +38,7 @@
                         <td th:text="${tx.accountTypeLabel ?: '—'}">Checking</td>
                         <td th:text="${tx.accountName ?: '—'}">Account</td>
                         <td class="tx-table-actions">
-                            <button type="button" class="tx-details-btn" title="View details"
+                            <button type="button" class="tx-action-btn tx-details-btn" title="View details"
                                     th:attr="data-date=${#temporals.format(tx.transactionDate, 'EEEE, MMMM d, yyyy')},
                                              data-amount=${sign + amountText},
                                              data-direction=${tx.direction.name()},
@@ -51,6 +51,23 @@
                                              data-account-type=${tx.accountTypeLabel},
                                              data-budget=${#strings.capitalize(#strings.toLowerCase(tx.budgetMonth.name())) + ' ' + tx.budgetYear}">
                                 <i class="fas fa-info-circle"></i>
+                            </button>
+                            <button type="button" class="tx-action-btn tx-edit-btn" title="Edit transaction"
+                                    onclick="openEditTransactionModal(this)"
+                                    th:attr="data-id=${tx.id},
+                                             data-amount=${tx.amount},
+                                             data-type=${tx.direction.name()},
+                                             data-date=${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')},
+                                             data-description=${tx.description},
+                                             data-note=${tx.note},
+                                             data-account-id=${tx.accountId},
+                                             data-category-id=${tx.categoryId}">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button type="button" class="tx-action-btn tx-delete-btn" title="Delete transaction"
+                                    onclick="deleteTransaction(this)"
+                                    th:attr="data-id=${tx.id}">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>

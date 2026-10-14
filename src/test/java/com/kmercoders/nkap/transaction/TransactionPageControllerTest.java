@@ -239,6 +239,40 @@ class TransactionPageControllerTest {
 
     @Test
     @WithMockUser(username = EMAIL)
+    void getTransactions_rendersEditAndDeleteButtonsWithTransactionData() throws Exception {
+        Transaction tx = new Transaction(new BigDecimal("42.50"), currentMonth.atDay(2), Direction.DEBIT,
+            TransactionType.STANDARD, null, account, budgetCategory, currentBudget);
+        tx = transactionRepository.save(tx);
+
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"editTransactionModal\"")))
+                .andExpect(content().string(not(containsString("id=\"editTxBudgetId\""))))
+                .andExpect(content().string(containsString("onclick=\"openEditTransactionModal(this)\"")))
+                .andExpect(content().string(containsString("onclick=\"deleteTransaction(this)\"")))
+                .andExpect(content().string(containsString("data-id=\"" + tx.getId() + "\"")))
+                .andExpect(content().string(containsString("data-amount=\"42.50\"")))
+                .andExpect(content().string(containsString("data-account-id=\"" + account.getId() + "\"")))
+                .andExpect(content().string(containsString(
+                    "data-category-id=\"" + budgetCategory.getCategory().getId() + "\"")));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void getTransactions_withPagePastTheEnd_returnsLastPage() throws Exception {
+        for (int day = 1; day <= 12; day++) {
+            saveStandard(day, "day-" + day);
+        }
+
+        Page<TransactionListItemDTO> page = pageFrom(mockMvc.perform(get(URL).param("page", "5"))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(page.getNumber()).isEqualTo(1);
+        assertThat(descriptions(page)).containsExactly("day-2", "day-1");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
     void getTransactions_withNoTransactions_showsEmptyState() throws Exception {
         mockMvc.perform(get(URL))
                 .andExpect(status().isOk())
