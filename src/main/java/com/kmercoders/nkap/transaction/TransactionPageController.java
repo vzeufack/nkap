@@ -1,6 +1,6 @@
 package com.kmercoders.nkap.transaction;
 
-import com.kmercoders.nkap.account.AccountService;
+import com.kmercoders.nkap.account.AccountSidebarModel;
 import com.kmercoders.nkap.account.AccountType;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.CategoryService;
@@ -23,15 +23,15 @@ public class TransactionPageController {
 
     private final TransactionService transactionService;
     private final AppUserService appUserService;
-    private final AccountService accountService;
     private final CategoryService categoryService;
+    private final AccountSidebarModel accountSidebarModel;
 
     public TransactionPageController(TransactionService transactionService, AppUserService appUserService,
-                                     AccountService accountService, CategoryService categoryService) {
-        this.transactionService = transactionService;
-        this.appUserService     = appUserService;
-        this.accountService     = accountService;
-        this.categoryService    = categoryService;
+                                     CategoryService categoryService, AccountSidebarModel accountSidebarModel) {
+        this.transactionService  = transactionService;
+        this.appUserService      = appUserService;
+        this.categoryService     = categoryService;
+        this.accountSidebarModel = accountSidebarModel;
     }
 
     @GetMapping("/transactions")
@@ -48,7 +48,7 @@ public class TransactionPageController {
         }
 
         model.addAttribute("appUser", appUserService.getAuthenticatedUser());
-        model.addAttribute("accounts", accountService.getAccountsForCurrentUser());
+        accountSidebarModel.populate(model);
         model.addAttribute("categoryOptions", categoryService.getCategoryOptionsForCurrentUser());
         model.addAttribute("filterGroups", categoryService.getGroupsWithCategoriesForCurrentUser());
         model.addAttribute("accountTypes", AccountType.values());

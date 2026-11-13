@@ -51,6 +51,14 @@
             swap:    'innerHTML',
             headers: { 'HX-Request': 'true' }
         });
+
+        // Transactions change account balances and whether an account can be deleted —
+        // keep the accounts sidebar in sync.
+        htmx.ajax('GET', '/budgets/accounts-sidebar', {
+            target:  '#accounts-sidebar-container',
+            swap:    'outerHTML',
+            headers: { 'HX-Request': 'true' }
+        });
     });
 
     document.addEventListener('click', function (event) {

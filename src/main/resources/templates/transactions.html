@@ -47,7 +47,14 @@
 
             <th:block th:replace="~{fragments/sidebar-nav :: sidebar-nav('transactions')}"></th:block>
 
-            <div class="flex-grow-1"></div>
+            <div class="sidebar-section sidebar-accounts-section flex-grow-1">
+                <div class="sidebar-section-header">
+                    <span>Accounts</span>
+                    <button class="btn-icon" title="Add account" onclick="openAddAccountModal()"><i class="fas fa-plus-circle"></i></button>
+                </div>
+
+                <th:block th:replace="~{fragments/accounts-sidebar :: accounts-sidebar}"></th:block>
+            </div>
 
             <div class="sidebar-section sidebar-user-section">
                 <div class="user-info">
@@ -114,9 +121,12 @@
 <th:block th:replace="~{fragments/transaction-modals :: add-transaction-modal(false)}"></th:block>
 <th:block th:replace="~{fragments/transaction-modals :: edit-transaction-modal(false)}"></th:block>
 <th:block th:replace="~{fragments/transaction-modals :: bulk-upload-modal}"></th:block>
+<th:block th:replace="~{fragments/account-modals :: add-account-modal}"></th:block>
+<th:block th:replace="~{fragments/account-modals :: edit-account-modal}"></th:block>
 
 <th:block th:replace="~{fragments/header :: scripts}"></th:block>
 <script src="/js/nkap-core.js"></script>
+<script src="/js/nkap-accounts.js"></script>
 <script src="/js/nkap-transactions.js"></script>
 <script src="/js/nkap-bulk-upload.js"></script>
 <script src="/js/nkap-modal-bindings.js"></script>

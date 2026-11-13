@@ -1,5 +1,6 @@
 /* nkap-accounts.js — Add/Edit/Delete Account modal logic.
- * Loaded persistently (see home.html) so it stays available across htmx fragment swaps.
+ * Loaded by both home.html and transactions.html (the accounts sidebar appears on both), and
+ * persistently on home.html so it stays available across htmx fragment swaps.
  * Uses the shared Nkap.http / Nkap.forms / Nkap.ui helpers from nkap-core.js.
  */
 

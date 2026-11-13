@@ -317,7 +317,26 @@ class TransactionPageControllerTest {
         mockMvc.perform(get(URL).param("page", "0").header("HX-Request", "true"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("fragments/transactions-table :: transactions-table"))
-                .andExpect(content().string(not(containsString("<html"))));
+                .andExpect(content().string(not(containsString("<html"))))
+                .andExpect(content().string(not(containsString("id=\"accounts-sidebar-container\""))));
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void getTransactions_rendersAccountsSidebarWithModals() throws Exception {
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"accounts-sidebar-container\"")))
+                .andExpect(content().string(containsString("onclick=\"openAddAccountModal()\"")))
+                .andExpect(content().string(containsString("data-name=\"Everyday Checking\"")))
+                .andExpect(content().string(containsString("data-name=\"Rainy Day\"")))
+                .andExpect(content().string(containsString("onclick=\"openEditAccountModal(this)\"")))
+                .andExpect(content().string(containsString("Net Worth")))
+                .andExpect(content().string(containsString("$1,500.00")))
+                .andExpect(content().string(containsString("id=\"addAccountModal\"")))
+                .andExpect(content().string(containsString("id=\"editAccountModal\"")))
+                .andExpect(content().string(containsString("id=\"accountFinancialInstitutionSelect\"")))
+                .andExpect(content().string(containsString("/js/nkap-accounts.js")));
     }
 
     // ── Isolation ──────────────────────────────────────────────────────────────
@@ -333,6 +352,15 @@ class TransactionPageControllerTest {
                 .andReturn();
 
         assertThat(descriptions(pageFrom(result))).containsExactly("mine");
+    }
+
+    @Test
+    @WithMockUser(username = EMAIL)
+    void getTransactions_accountsSidebarExcludesOtherUsersAccounts() throws Exception {
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-name=\"Everyday Checking\"")))
+                .andExpect(content().string(not(containsString("Their Checking"))));
     }
 
     // ── Unauthenticated ────────────────────────────────────────────────────────

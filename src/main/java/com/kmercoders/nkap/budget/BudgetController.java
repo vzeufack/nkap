@@ -1,13 +1,11 @@
 package com.kmercoders.nkap.budget;
 
-import com.kmercoders.nkap.account.AccountDTO;
-import com.kmercoders.nkap.account.AccountService;
+import com.kmercoders.nkap.account.AccountSidebarModel;
 import com.kmercoders.nkap.appuser.AppUser;
 import com.kmercoders.nkap.appuser.AppUserService;
 import com.kmercoders.nkap.category.BudgetCategory;
 import com.kmercoders.nkap.category.Category;
 import com.kmercoders.nkap.category.CategoryService;
-import com.kmercoders.nkap.financialinstitution.FinancialInstitutionService;
 import com.kmercoders.nkap.transaction.Direction;
 import com.kmercoders.nkap.transaction.TransactionService;
 import com.kmercoders.nkap.transaction.TransactionSummaryDTO;
@@ -37,20 +35,18 @@ public class BudgetController {
 
     private final BudgetService budgetService;
     private final AppUserService appUserService;
-    private final AccountService accountService;
     private final TransactionService transactionService;
     private final CategoryService categoryService;
-    private final FinancialInstitutionService financialInstitutionService;
+    private final AccountSidebarModel accountSidebarModel;
 
     public BudgetController(BudgetService budgetService, AppUserService appUserService,
-                            AccountService accountService, TransactionService transactionService,
-                            CategoryService categoryService, FinancialInstitutionService financialInstitutionService) {
-        this.budgetService              = budgetService;
-        this.appUserService             = appUserService;
-        this.accountService             = accountService;
-        this.transactionService         = transactionService;
-        this.categoryService            = categoryService;
-        this.financialInstitutionService = financialInstitutionService;
+                            TransactionService transactionService, CategoryService categoryService,
+                            AccountSidebarModel accountSidebarModel) {
+        this.budgetService       = budgetService;
+        this.appUserService      = appUserService;
+        this.transactionService  = transactionService;
+        this.categoryService     = categoryService;
+        this.accountSidebarModel = accountSidebarModel;
     }
 
     @GetMapping("/")
@@ -66,7 +62,7 @@ public class BudgetController {
         model.addAttribute("currentMonth", currentMonth + " " + currentYear);
         model.addAttribute("currentMonthValue", currentMonth.name());
         model.addAttribute("currentYearValue", currentYear);
-        addAccountAttributes(model);
+        accountSidebarModel.populate(model);
 
         if (budget != null) {
             Map<Long, List<BudgetCategory>> categoriesByGroup = budget.getBudgetCategories()
@@ -112,7 +108,7 @@ public class BudgetController {
         model.addAttribute("currentYearValue", year);
 
         if (htmxRequest == null) {
-            addAccountAttributes(model);
+            accountSidebarModel.populate(model);
         }
 
         if (budget != null) {
@@ -156,7 +152,7 @@ public class BudgetController {
 
     @GetMapping("/accounts-sidebar")
     public String showAccountsSidebar(Model model) {
-        addAccountAttributes(model);
+        accountSidebarModel.populate(model);
         return "fragments/accounts-sidebar :: accounts-sidebar";
     }
 
@@ -199,20 +195,6 @@ public class BudgetController {
         model.addAttribute("planStatus", planStatus);
         model.addAttribute("spentSoFar", spentSoFar);
         model.addAttribute("canAutoAllocate", categoryService.hasFundsToAutoAllocate(budget));
-    }
-
-    private void addAccountAttributes(Model model) {
-        List<AccountDTO> accounts = accountService.getAccountsForCurrentUser();
-        BigDecimal netWorth = accounts.stream()
-            .map(AccountDTO::getBalance)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal categoryBalance = categoryService.getTotalCategoryBalanceForCurrentUser();
-        model.addAttribute("accounts", accounts);
-        model.addAttribute("netWorth", netWorth);
-        model.addAttribute("categoryBalance", categoryBalance);
-        model.addAttribute("balanceDifference", netWorth.subtract(categoryBalance));
-        model.addAttribute("accountIdsWithTransactions", accountService.getAccountIdsWithTransactionsForCurrentUser());
-        model.addAttribute("financialInstitutions", financialInstitutionService.getAllFinancialInstitutions());
     }
 
     @PostMapping("/create/{month}/{year}")
